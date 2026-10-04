@@ -5,6 +5,14 @@ self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
+// Ao abrir o app, sempre confere com o servidor se há versão nova da página,
+// em vez de usar a cópia que o navegador guarda por até 10 minutos.
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request, { cache: 'no-cache' }));
+  }
+});
+
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
   const sentAt = data.sentAt
