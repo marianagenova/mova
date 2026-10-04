@@ -457,8 +457,11 @@
           </div>
         </div>
         <div class="campo" id="f-campo-ate">
-          <span class="rotulo">Até (opcional, para vários dias)</span>
-          <div class="campo-linha"><input type="date" id="f-ate"></div>
+          <span class="rotulo">Até (opcional, para vários dias): dia e hora da volta</span>
+          <div class="campo-linha">
+            <input type="date" id="f-ate">
+            <input type="text" class="hora" id="f-ate-hora" inputmode="numeric" maxlength="5" placeholder="hh:mm" autocomplete="off">
+          </div>
         </div>
       </div>
       <div class="campo" id="f-campo-repeticao">
@@ -755,6 +758,35 @@
       return '';
     }
 
+    // Item de vários dias (ex.: viagem): tem "até" e não se repete.
+    const variosDias = (item) => Boolean(item.ate) && !item.regra;
+
+    // Horário que o item ocupa num dia, em minutos ({ a: início, b: fim }),
+    // ou null quando ocupa o dia todo ou não tem horário.
+    // Vários dias com horário: no dia da ida, da saída até o fim do dia; nos dias do meio,
+    // o dia todo; no dia da volta, do começo do dia até a chegada.
+    function intervaloNoDia(item, d) {
+      if (item.diaTodo || !item.hora) return null;
+      if (!variosDias(item)) {
+        const a = minutos(item.hora);
+        return { a, b: a + duracaoDe(item) };
+      }
+      const k = chave(d);
+      if (k === item.data) return { a: minutos(item.hora), b: 24 * 60, continua: true };
+      if (k === item.ate && item.horaFim) return { a: 0, b: minutos(item.horaFim), veioAntes: true };
+      return null;
+    }
+
+    function textoIntervalo(x) {
+      if (x.continua) return `a partir de ${fmtMin(x.a)}`;
+      if (x.veioAntes) return `até ${fmtMin(x.b)}`;
+      return `${fmtMin(x.a)}–${fmtMin(x.b)}`;
+    }
+
+    function blocosDoDia(d, lista) {
+      return lista.map((i) => ({ i, ...intervaloNoDia(i, d) })).filter((x) => x.b !== undefined);
+    }
+
     function ordenar(a, b) {
       if (Boolean(a.diaTodo) !== Boolean(b.diaTodo)) return a.diaTodo ? -1 : 1;
       return (a.hora || '99').localeCompare(b.hora || '99');
@@ -765,16 +797,16 @@
     }
 
     // Conta só o que ainda ocupa o dia (não conta "não fazer" nem reagendados).
+    // Itens de dia todo e de vários dias (ex.: viagem) não entram na conta.
     function cargaDoDia(d) {
       return itensDoDia(d, false)
-        .filter((i) => !i.diaTodo)
+        .filter((i) => !i.diaTodo && !variosDias(i))
         .filter((i) => { const e = estadoDe(i, d); return !e || e.estado === 'feito'; })
         .reduce((soma, i) => soma + duracaoDe(i), 0);
     }
 
     function sobreposicoes(d) {
-      const blocos = itensDoDia(d, false).filter((i) => i.hora && !i.diaTodo)
-        .map((i) => ({ i, a: minutos(i.hora), b: minutos(i.hora) + duracaoDe(i) }));
+      const blocos = blocosDoDia(d, itensDoDia(d, false));
       const pares = [];
       for (let x = 0; x < blocos.length; x++) {
         for (let y = x + 1; y < blocos.length; y++) {
@@ -818,7 +850,13 @@
       if (contexto === 'resolver' && item.data) {
         meta.push(`planejada para ${rotuloDia(deChave(item.data))}${item.hora ? ', ' + fmtHora(item.hora) : ''}`);
       } else if (contexto !== 'encaixar') {
-        if (item.diaTodo) {
+        if (variosDias(item) && !item.diaTodo) {
+          const volta = `${fmtDiaCurto(deChave(item.ate))}${item.horaFim ? ' às ' + fmtHora(item.horaFim) : ''}`;
+          const k = d ? chave(d) : null;
+          if (k === item.ate) meta.push(item.horaFim ? `Volta às ${fmtHora(item.horaFim)}` : 'Último dia');
+          else if (k && k !== item.data) meta.push(`Dia todo · volta ${volta}`);
+          else meta.push(`Sai às ${fmtHora(item.hora)} · volta ${volta}`);
+        } else if (item.diaTodo) {
           const fim = item.ate ? deChave(item.ate) : null;
           if (fim && d && chave(d) === item.data) meta.push(`Dia todo · até ${fmtDiaCurto(fim)}`);
           else if (fim) meta.push('Dia todo · continua');
@@ -1096,8 +1134,7 @@
     // tudo marcável ali mesmo.
     function htmlAgora() {
       const agora = minutosAgora();
-      const blocos = itensDoDia(HOJE, false).filter((i) => i.hora && !i.diaTodo)
-        .map((i) => ({ i, a: minutos(i.hora), b: minutos(i.hora) + duracaoDe(i) }));
+      const blocos = blocosDoDia(HOJE, itensDoDia(HOJE, false));
       const atuais = blocos.filter((x) => x.a <= agora && agora < x.b);
       const proximo = blocos.find((x) => x.a > agora && !estadoDe(x.i, HOJE));
       const passados = blocos.filter((x) => x.b <= agora && !estadoDe(x.i, HOJE));
@@ -1108,7 +1145,7 @@
         ? `<ul class="itens">${atuais.map((x) => htmlItem(x.i, HOJE, 'dia')).join('')}</ul>`
         : '<p class="grande">Livre</p>';
       if (proximo) {
-        html += `<p class="sub" style="margin-top:10px"><strong>A seguir:</strong> ${esc(proximo.i.titulo)} às ${fmtHora(proximo.i.hora)} · em ${fmtDur(proximo.a - agora)}</p>`;
+        html += `<p class="sub" style="margin-top:10px"><strong>A seguir:</strong> ${esc(proximo.i.titulo)} às ${fmtMin(proximo.a)} · em ${fmtDur(proximo.a - agora)}</p>`;
       } else {
         html += '<p class="sub" style="margin-top:10px">Nada mais com horário hoje.</p>';
       }
@@ -1136,12 +1173,14 @@
     }
 
     function htmlLinhaDoTempo(d) {
-      const doDia = itensDoDia(d).filter((i) => i.hora && !i.diaTodo);
       const PX = 1.4;
-      const blocos = doDia.map((i) => ({ i, a: minutos(i.hora), b: minutos(i.hora) + duracaoDe(i) })).sort((x, y) => x.a - y.a);
+      const blocos = blocosDoDia(d, itensDoDia(d)).sort((x, y) => x.a - y.a);
       // Mostra de 1h antes do primeiro item até 1h depois do último.
-      const ini = blocos.length ? Math.max(0, Math.min(...blocos.map((x) => Math.floor(x.a / 60) * 60)) - 60) : 7 * 60;
-      const fim = blocos.length ? Math.min(24 * 60, Math.max(...blocos.map((x) => Math.ceil(x.b / 60) * 60)) + 60) : 22 * 60;
+      // Item que vem do dia anterior ou continua no seguinte não estica a linha até meia-noite.
+      const comecoVisivel = (x) => (x.veioAntes ? x.b - 60 : x.a);
+      const fimVisivel = (x) => (x.continua ? x.a + 60 : x.b);
+      const ini = blocos.length ? Math.max(0, Math.min(...blocos.map((x) => Math.floor(comecoVisivel(x) / 60) * 60)) - 60) : 7 * 60;
+      const fim = blocos.length ? Math.min(24 * 60, Math.max(...blocos.map((x) => Math.ceil(fimVisivel(x) / 60) * 60)) + 60) : 22 * 60;
 
       const colunas = [];
       for (const x of blocos) {
@@ -1160,12 +1199,15 @@
         const e = estadoDe(x.i, d);
         const largura = x.sobre ? 100 / n : 100;
         const esquerda = x.sobre ? x.col * largura : 0;
-        const altura = Math.max(24, (x.b - x.a) * PX - 2);
+        const topo = Math.max(x.a, ini);
+        const base = Math.min(x.b, fim);
+        const altura = Math.max(24, (base - topo) * PX - 2);
+        const horario = x.continua ? `sai ${fmtMin(x.a)}` : x.veioAntes ? `volta ${fmtMin(x.b)}` : `${fmtMin(x.a)}–${fmtMin(x.b)}`;
         html += `
           <button class="bloco area-${x.i.area} ${x.sobre ? 'sobreposto' : ''} ${e ? 'feito' : ''} ${altura < 42 ? 'curto' : ''}" type="button"
             data-acao="bloco" data-id="${x.i.id}" data-dia="${chave(d)}"
-            style="top:${(x.a - ini) * PX}px;height:${altura}px;left:calc(${esquerda}% + 6px);width:calc(${largura}% - 8px)">
-            <strong>${esc(x.i.titulo)}</strong><span>${fmtMin(x.a)}–${fmtMin(x.b)}</span>
+            style="top:${(topo - ini) * PX}px;height:${altura}px;left:calc(${esquerda}% + 6px);width:calc(${largura}% - 8px)">
+            <strong>${esc(x.i.titulo)}</strong><span>${horario}</span>
           </button>`;
       }
       if (chave(d) === chave(HOJE)) {
@@ -1214,10 +1256,10 @@
       const pares = sobreposicoes(d);
       if (pares.length) {
         html += `<div class="card aviso">${pares.map(([x, y]) =>
-          `"${esc(x.i.titulo)}" (${fmtMin(x.a)}–${fmtMin(x.b)}) se sobrepõe a "${esc(y.i.titulo)}" (${fmtMin(y.a)}).`).join('<br>')}</div>`;
+          `"${esc(x.i.titulo)}" (${textoIntervalo(x)}) se sobrepõe a "${esc(y.i.titulo)}" (${textoIntervalo(y)}).`).join('<br>')}</div>`;
       }
 
-      const semHora = doDia.filter((i) => i.diaTodo || !i.hora);
+      const semHora = doDia.filter((i) => !intervaloNoDia(i, d));
       if (semHora.length) html += secao('Dia todo ou sem horário', semHora.map((i) => htmlItem(i, d, 'dia')));
       html += '<section class="secao"><h2><span>Linha do tempo</span></h2></section>';
       html += htmlLinhaDoTempo(d);
@@ -1285,7 +1327,7 @@
       let feitos = 0;
       let minimas = 0;
       for (const item of itens) {
-        if ((soRecorrentes && !item.regra) || !ocorreEm(item, d) || item.diaTodo) continue;
+        if ((soRecorrentes && !item.regra) || !ocorreEm(item, d) || item.diaTodo || variosDias(item)) continue;
         const e = estadoDe(item, d);
         if (e && (e.conta === 'neutro' || e.estado === 'reagendado')) continue;
         total++;
@@ -1331,7 +1373,7 @@
           const areas = [...new Set(doDia.map((i) => i.area))].sort();
           extra = `<span class="pontos">${areas.map((a) => `<i style="background:var(--${a})"></i>`).join('')}</span>`;
         }
-        if (itens.some((i) => i.area === 'trabalho' && i.diaTodo && ocorreEm(i, d))) extra += '<span class="faixa-trab"></span>';
+        if (itens.some((i) => i.area === 'trabalho' && (i.diaTodo || variosDias(i)) && ocorreEm(i, d))) extra += '<span class="faixa-trab"></span>';
         if (chave(d) === chave(HOJE)) classes.push('hoje');
         if (chave(d) === tela.diaSelecionado) classes.push('sel');
         grade += `<button class="${classes.join(' ')}" type="button" data-acao="dia-cal" data-dia="${chave(d)}">${dia}${extra}</button>`;
@@ -1594,7 +1636,7 @@
       const passos = 3;
       let miolo = '';
       if (f.passo === 0) {
-        const abertos = itensDoDia(d, false).filter((i) => !estadoDe(i, d) && !i.diaTodo);
+        const abertos = itensDoDia(d, false).filter((i) => !estadoDe(i, d) && !i.diaTodo && !variosDias(i));
         miolo = `
           <h2>Itens de hoje sem marcação<small>Se você marcou tudo durante o dia, esta lista fica vazia. Para cada item que sobrou: feito, não fiz ou reagendar.</small></h2>
           ${abertos.length ? `<ul class="itens">${abertos.map((i) => htmlItem(i, d, 'dia')).join('')}</ul>`
@@ -1682,7 +1724,7 @@
               <span>${fmtDiaCurto(d)}</span><span class="trilho"><i style="width:${(c / maior) * 100}%"></i></span><b>${fmtDur(c)}</b>
             </div>`);
           for (const [x, y] of sobreposicoes(d)) avisos.push(`${fmtDiaCurto(d)}: "${esc(x.i.titulo)}" se sobrepõe a "${esc(y.i.titulo)}".`);
-          const viagem = itens.find((i) => i.area === 'trabalho' && i.tipo === 'compromisso' && i.diaTodo && ocorreEm(i, d));
+          const viagem = itens.find((i) => i.area === 'trabalho' && i.tipo === 'compromisso' && (i.diaTodo || variosDias(i)) && ocorreEm(i, d));
           if (viagem) {
             const pessoais = itensDoDia(d, false).filter((i) => i.area === 'pessoal' && i.hora);
             if (pessoais.length) avisos.push(`${fmtDiaCurto(d)}: "${esc(viagem.titulo)}" (Trabalho) no mesmo dia de ${pessoais.map((i) => `"${esc(i.titulo)}"`).join(', ')}.`);
@@ -2042,6 +2084,7 @@
       $('f-dia-todo-rotulo').hidden = !compromisso;
       $('f-campo-ate').hidden = !compromisso || repete;
       $('f-hora').disabled = compromisso && $('f-dia-todo').checked;
+      $('f-ate-hora').disabled = $('f-hora').disabled;
       $('f-campo-minima').hidden = !recorrivel;
       $('f-campo-planob').hidden = !recorrivel;
       $('f-detalhes').hidden = !form.detalhes;
@@ -2118,6 +2161,7 @@
           $('f-hora').value = item.hora || '';
           $('f-dia-todo').checked = Boolean(item.diaTodo);
           $('f-ate').value = item.ate || '';
+          $('f-ate-hora').value = item.horaFim || '';
         }
         $('f-repeticao').value = !r ? 'nao'
           : r.semanal ? (r.semanal.length === 7 ? 'todo' : r.semanal.join() === '1,2,3,4,5' ? 'uteis' : 'dias')
@@ -2154,7 +2198,7 @@
       return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
     }
 
-    for (const id of ['f-hora', 'f-quando-hora']) {
+    for (const id of ['f-hora', 'f-quando-hora', 'f-ate-hora']) {
       // Enquanto digita: só números, com os dois pontos depois das horas.
       $(id).addEventListener('input', (ev) => {
         const d = ev.target.value.replace(/\D/g, '').slice(0, 4);
@@ -2253,7 +2297,14 @@
           item.data = inicio;
           if (form.tipo === 'compromisso' && $('f-ate').value) {
             if ($('f-ate').value < inicio) return erro('A data final precisa ser depois da data inicial.');
-            if ($('f-ate').value > inicio) item.ate = $('f-ate').value;
+            if ($('f-ate').value > inicio) {
+              item.ate = $('f-ate').value;
+              if (!diaTodo && $('f-ate-hora').value.trim()) {
+                const horaFim = normalizarHora($('f-ate-hora').value);
+                if (!horaFim) return erro(horaInvalida);
+                item.horaFim = horaFim;
+              }
+            }
           }
         } else {
           const problema = definirRegra(inicio);

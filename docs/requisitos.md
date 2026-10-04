@@ -162,7 +162,7 @@ São marcadas na visão do dia ou no fechamento do dia, e é possível criar met
 
 ### 4.13 Modelos
 Modelos criam um item já preenchido e os itens que costumam vir junto:
-- **Viagem de trabalho:** compromisso de vários dias, mais "Fazer a mala" na véspera (com a lista da mala) e "Reembolso" com prazo de 5 dias depois da volta.
+- **Viagem de trabalho:** compromisso de vários dias (com hora de ida e, opcionalmente, hora de volta), mais "Fazer a mala" na véspera (com a lista da mala) e "Reembolso" com prazo de 5 dias depois da volta.
 - **Consulta:** compromisso, mais "Separar documentos e exames" na véspera.
 
 ### 4.14 Planejamento da semana (domingo)
