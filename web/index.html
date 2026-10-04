@@ -314,6 +314,17 @@
     .resultado .botoes { margin-top: 8px; }
     .resultado .botoes span { align-self: center; }
 
+    /* Trilha de estudos */
+    .material .num { width: 22px; text-align: right; color: var(--muted); font-size: 0.8125rem; font-weight: 700; flex: none; }
+    .tema {
+      display: inline-block; background: var(--cor-clara); color: var(--cor);
+      border-radius: 999px; padding: 0 8px; font-weight: 700; font-size: 0.75rem; line-height: 18px;
+    }
+    .material.is-concluido .titulo span { text-decoration: line-through; color: var(--muted); }
+    .concluido-linha { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.875rem; }
+    .concluido-linha svg { color: var(--cor); }
+    .concluido-linha small { color: var(--muted); }
+
     /* Navegação */
     nav.abas {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
@@ -646,6 +657,9 @@
       treino: '<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>',
       estudo: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
       check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+      livro: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
+      video: '<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9l5 3-5 3z"/>',
+      curso: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/>',
     };
     const TIPOS = { tarefa: 'Tarefa', compromisso: 'Compromisso', treino: 'Treino', estudo: 'Estudo' };
     const AREAS = { pessoal: 'Pessoal', trabalho: 'Trabalho' };
@@ -700,7 +714,37 @@
         ultimoBackup: null,
         criadoEm: inicio,
         modelos: modelosPadrao(),
+        trilha: trilhaInicial(),
+        coresTemas: {},
       };
+    }
+
+    // Trilha de estudos: fila ordenada de livros, vídeos e cursos. A ordem é a ordem da lista.
+    // Status: 'fila' | 'andamento' | 'concluido' (com a data em concluidoEm).
+    function trilhaInicial() {
+      return [
+        ['Bons hábitos, maus hábitos', 'Wendy Wood', 'livro', 'Rotina e hábitos'],
+        ['Autismo sem máscara', 'Devon Price', 'livro', 'Autismo'],
+        ['O cérebro nosso de cada dia', 'Suzana Herculano-Houzel', 'livro', 'Neurociência'],
+        ['Understanding the Brain', 'Univ. de Chicago, Coursera', 'curso', 'Neurociência'],
+        ['Sete lições e meia sobre o cérebro', 'Lisa Feldman Barrett', 'livro', 'Neurociência'],
+        ['Como as emoções são feitas', 'Lisa Feldman Barrett', 'livro', 'Neurociência'],
+        ['Por que nós dormimos', 'Matthew Walker', 'livro', 'Neurociência'],
+        ['Incógnito', 'David Eagleman', 'livro', 'Neurociência'],
+        ['Comporte-se', 'Robert Sapolsky', 'livro', 'Neurociência'],
+        ['O cérebro autista', 'Temple Grandin', 'livro', 'Autismo'],
+        ['Women and Girls on the Autism Spectrum', 'Sarah Hendrickx', 'livro', 'Autismo'],
+        ['NeuroTribes', 'Steve Silberman', 'livro', 'Autismo'],
+        ['Dupla excepcionalidade', 'Roama-Alves e Nakano', 'livro', 'Dupla excepcionalidade'],
+        ['Autismo, Superdotação e Dupla Excepcionalidade', 'org. Piske e Collins', 'livro', 'Dupla excepcionalidade'],
+        ['Your Rainforest Mind', 'Paula Prober', 'livro', 'Dupla excepcionalidade'],
+        ['Refuse to Choose', 'Barbara Sher', 'livro', 'Multipotencialidade'],
+        ['How to Be Everything', 'Emilie Wapnick', 'livro', 'Multipotencialidade'],
+        ['Como arrumar a casa quando a vida está caótica', 'KC Davis', 'livro', 'Rotina e hábitos'],
+        ["TED: Why some of us don't have one true calling", 'Emilie Wapnick', 'video', 'Multipotencialidade'],
+        ['TED: The world needs all kinds of minds', 'Temple Grandin', 'video', 'Autismo'],
+        ['TED: What is so special about the human brain?', 'Suzana Herculano-Houzel', 'video', 'Neurociência'],
+      ].map(([titulo, autor, tipo, tema], i) => ({ id: `t${i + 1}`, titulo, autor, tipo, tema, status: i === 0 ? 'andamento' : 'fila' }));
     }
 
     // Modelos: preenchem o cadastro e criam junto as tarefas que costumam vir com o item.
@@ -730,7 +774,11 @@
     // O tipo Hábito foi unido a Tarefa: o que se repete agora é uma tarefa com repetição.
     for (const item of dados.itens) if (item.tipo === 'habito') item.tipo = 'tarefa';
     if (!dados.modelos) dados.modelos = modelosPadrao(); // dados salvos antes de existir o editor de modelos
-    const { itens, estados, registros, metas, marcas, modelos } = dados;
+    if (!dados.trilha) dados.trilha = trilhaInicial(); // dados salvos antes de existir a trilha de estudos
+    if (!dados.coresTemas) dados.coresTemas = {};
+    // Cores dos temas na ordem da trilha, para ficarem iguais em todos os aparelhos.
+    for (const m of dados.trilha) if (!(m.tema in dados.coresTemas)) dados.coresTemas[m.tema] = Object.keys(dados.coresTemas).length % 8;
+    const { itens, estados, registros, metas, marcas, modelos, trilha, coresTemas } = dados;
     let planoTreino = dados.planoTreino || '';
 
     let proximoId = 1 + Math.max(0, ...itens.map((i) => Number(i.id.slice(1)) || 0));
@@ -956,7 +1004,9 @@
       } else {
         meta.push(fmtDur(duracaoDe(item)));
       }
-      if (item.regra) meta.push(textoRegra(item.regra));
+      // No estudo, no lugar da repetição aparece o que está em andamento na trilha.
+      if (item.tipo === 'estudo') meta.push(textoEmAndamento());
+      else if (item.regra) meta.push(textoRegra(item.regra));
       if (item.etapas) meta.push(`etapas ${item.etapas.filter((x) => x.feita).length} de ${item.etapas.length}`);
       if (item.prazo && !e) meta.push(textoPrazo(item));
       if (item.reagendadoDe && !e) meta.push(`reagendado de ${rotuloDia(deChave(item.reagendadoDe))}`);
@@ -1084,7 +1134,10 @@
           </div>`;
       }
       const detalhes = htmlDetalhes(item);
-      const gerenciar = `
+      const verTrilha = item.tipo === 'estudo'
+        ? '<div class="botoes"><button class="btn" type="button" data-acao="trilha-abrir">Ver trilha ›</button></div>'
+        : '';
+      const gerenciar = `${verTrilha}
         <div class="botoes gerenciar">
           <button class="link" type="button" data-acao="editar">Editar</button>
           <button class="link" type="button" data-acao="excluir">Excluir</button>
@@ -1612,6 +1665,164 @@
         <p class="vazio" style="margin-top:16px"><a href="teste/">Testar notificações</a></p>`;
     }
 
+    // ============ Trilha de estudos (fora da barra de abas) ============
+    const TIPOS_MATERIAL = { livro: 'Livro', video: 'Vídeo', curso: 'Curso' };
+    // Cada tema ganha uma cor na primeira vez que aparece, e fica com ela.
+    const CORES_TEMAS = [
+      ['#b4572e', '#fbe9df'], ['#1f7a9c', '#e0f0f6'], ['#8e44ad', '#f3e8f8'], ['#a07200', '#fbf1d6'],
+      ['#c2416b', '#fbe6ed'], ['#3f7d2e', '#e6f2e1'], ['#4f5bd5', '#e8eafb'], ['#5d6b7a', '#eceff2'],
+    ];
+    function corDoTema(tema) {
+      if (!(tema in coresTemas)) coresTemas[tema] = Object.keys(coresTemas).length % CORES_TEMAS.length;
+      const [cor, clara] = CORES_TEMAS[coresTemas[tema]];
+      return `--cor:${cor};--cor-clara:${clara}`;
+    }
+    const emAndamento = () => trilha.filter((m) => m.status === 'andamento');
+    const naFila = () => trilha.filter((m) => m.status === 'fila');
+    function textoEmAndamento() {
+      const lista = emAndamento();
+      return lista.length ? lista.map((m) => esc(m.titulo)).join(' + ') : 'Trilha: nada em andamento';
+    }
+    function temas() { return [...new Set(trilha.map((m) => m.tema))]; }
+    function htmlTema(tema) { return `<span class="tema" style="${corDoTema(tema)}">${esc(tema)}</span>`; }
+
+    // Cartão de um material. Com "painel", o painel fica sempre aberto com esse conteúdo.
+    function htmlMaterial(m, numero = null, painel = null) {
+      const meta = [m.autor ? esc(m.autor) : '', TIPOS_MATERIAL[m.tipo], htmlTema(m.tema)];
+      if (m.status === 'concluido' && m.concluidoEm) meta.push(`concluído em ${fmtDiaCurto(deChave(m.concluidoEm))}`);
+      const aberto = painel !== null || tela.materialAberto === m.id;
+      return `
+        <li class="item material ${m.status === 'concluido' ? 'is-concluido' : ''}" style="${corDoTema(m.tema)}">
+          <div class="linha">
+            ${numero ? `<span class="num">${numero}</span>` : ''}
+            <button class="corpo" type="button" data-acao="material-abrir" data-mid="${m.id}" aria-expanded="${aberto}">
+              <div class="titulo">${icone(m.tipo)}<span>${esc(m.titulo)}</span></div>
+              <div class="meta">${meta.filter(Boolean).join(' · ')}</div>
+            </button>
+          </div>
+          ${aberto ? `<div class="painel">${painel !== null ? painel : htmlPainelMaterial(m)}</div>` : ''}
+        </li>`;
+    }
+
+    function htmlPainelMaterial(m) {
+      const mesmos = trilha.filter((x) => x.status === m.status);
+      const i = mesmos.indexOf(m);
+      const btn = (acao, texto, classe = '') => `<button class="btn ${classe}" type="button" data-acao="${acao}" data-mid="${m.id}">${texto}</button>`;
+      const ordem = m.status === 'concluido' ? '' : (i > 0 ? btn('material-subir', '↑ Subir') : '') + (i < mesmos.length - 1 ? btn('material-descer', '↓ Descer') : '');
+      const principais = {
+        fila: btn('material-comecar', 'Começar agora', 'principal'),
+        andamento: btn('material-concluir', 'Concluído', 'principal') + btn('material-fila', 'Voltar para a fila'),
+        concluido: btn('material-fila', 'Voltar para a fila'),
+      }[m.status];
+      return `
+        <div class="botoes">${principais}${ordem}</div>
+        <div class="botoes gerenciar">
+          ${m.status === 'concluido' ? '' : `<button class="link" type="button" data-acao="material-editar" data-mid="${m.id}">Editar</button>`}
+          <button class="link" type="button" data-acao="material-excluir" data-mid="${m.id}">Excluir</button>
+        </div>`;
+    }
+
+    function renderTrilha() {
+      let html = `
+        <div class="dia-nav">
+          <button class="btn" type="button" data-acao="trilha-voltar">‹ Voltar</button>
+          <h2>Trilha</h2>
+          <span style="width:72px"></span>
+        </div>`;
+      if (tela.materialEditando) return html + htmlEditorMaterial(tela.materialEditando);
+
+      const andamento = emAndamento();
+      const fila = naFila();
+      const concluidos = trilha.filter((m) => m.status === 'concluido')
+        .sort((a, b) => (b.concluidoEm || '').localeCompare(a.concluidoEm || ''));
+      html += '<div class="colunas"><div class="col">';
+      html += secao('Em andamento', andamento.map((m) => htmlMaterial(m)), '', 'Nada em andamento. Toque num item da fila para começar.');
+      html += `
+        <section class="secao"><h2><span>Concluídos (${concluidos.length})</span>
+          ${concluidos.length ? `<button class="link" type="button" data-acao="trilha-concluidos" style="padding:0;text-transform:none;letter-spacing:0">${tela.trilhaConcluidos ? 'Esconder' : 'Mostrar'}</button>` : ''}</h2>
+          ${!concluidos.length ? '<p class="vazio">Nenhum ainda.</p>'
+            : tela.trilhaConcluidos ? `<ul class="itens">${concluidos.map((m) => htmlMaterial(m)).join('')}</ul>` : ''}
+        </section>`;
+      html += '<div class="botoes" style="margin-top:16px"><button class="btn principal" type="button" data-acao="material-novo">+ Adicionar à trilha</button></div>';
+      html += '</div><div class="col">';
+      html += secao('Na fila', fila.map((m, i) => htmlMaterial(m, i + 1)), '', 'A fila está vazia.');
+      return html + '</div></div>';
+    }
+
+    function htmlEditorMaterial(m) {
+      const lista = temas();
+      const temaNovo = m.temaNovo || !lista.length;
+      return `
+        <section class="secao"><h2><span>${m.id ? 'Editar material' : 'Novo material'}</span></h2>
+          <div class="card" style="margin-top:0">
+            <div class="campo" style="margin-top:0"><span class="rotulo">Título</span>
+              <input type="text" data-mat="titulo" placeholder="Ex.: Bons hábitos, maus hábitos" value="${esc(m.titulo)}"></div>
+            <div class="campo"><span class="rotulo">Autor ou fonte</span>
+              <input type="text" data-mat="autor" placeholder="Ex.: Wendy Wood" value="${esc(m.autor)}"></div>
+            <div class="campo"><span class="rotulo">Tipo</span><div class="botoes">${Object.entries(TIPOS_MATERIAL).map(([v, nome]) => `
+              <button class="btn" type="button" data-acao="material-tipo" data-valor="${v}" aria-pressed="${m.tipo === v}">${nome}</button>`).join('')}</div></div>
+            <div class="campo"><span class="rotulo">Tema</span>
+              <div class="botoes">${lista.map((t) => `
+                <button class="btn" type="button" data-acao="material-tema" data-valor="${esc(t)}" aria-pressed="${!temaNovo && m.tema === t}">${esc(t)}</button>`).join('')}
+                ${lista.length ? `<button class="btn" type="button" data-acao="material-tema-novo" aria-pressed="${temaNovo}">+ Novo tema</button>` : ''}
+              </div>
+              ${temaNovo ? `<input type="text" data-mat="tema" placeholder="Nome do tema" value="${esc(m.tema)}">` : ''}
+            </div>
+            <div class="rodape">
+              <button class="btn" type="button" data-acao="material-cancelar">Cancelar</button>
+              <button class="btn principal" type="button" data-acao="material-salvar">Salvar</button>
+            </div>
+          </div>
+        </section>`;
+    }
+
+    // Leva o material para o começo da fila (e tira a data de conclusão, se tiver).
+    function voltarParaFila(m) {
+      trilha.splice(trilha.indexOf(m), 1);
+      m.status = 'fila';
+      delete m.concluidoEm;
+      const i = trilha.findIndex((x) => x.status === 'fila');
+      trilha.splice(i < 0 ? trilha.length : i, 0, m);
+    }
+
+    // Troca de lugar com o vizinho do mesmo status (a lista que aparece na tela).
+    function moverMaterial(m, passo) {
+      const mesmos = trilha.filter((x) => x.status === m.status);
+      const vizinho = mesmos[mesmos.indexOf(m) + passo];
+      if (!vizinho) return;
+      const a = trilha.indexOf(m);
+      const b = trilha.indexOf(vizinho);
+      trilha[a] = vizinho;
+      trilha[b] = m;
+    }
+
+    // Conclui e pergunta se quer começar o primeiro da fila. A troca nunca acontece sozinha.
+    function concluirMaterial(m) {
+      m.status = 'concluido';
+      m.concluidoEm = chave(HOJE);
+      tela.materialAberto = null;
+      const proximo = naFila()[0];
+      const depois = tela.fluxo; // o planejamento continua de onde estava
+      if (proximo) tela.fluxo = { tipo: 'proximo', concluido: m.id, proximo: proximo.id, depois };
+      avisar(`"${m.titulo}" concluído.`, () => {
+        m.status = 'andamento';
+        delete m.concluidoEm;
+        if (tela.fluxo && tela.fluxo.tipo === 'proximo') tela.fluxo = tela.fluxo.depois;
+      });
+    }
+
+    function fluxoProximo(f) {
+      const feito = trilha.find((m) => m.id === f.concluido);
+      const proximo = trilha.find((m) => m.id === f.proximo);
+      return `
+        <h2>✓ Concluído<small>${esc(feito.titulo)}</small></h2>
+        <p>Começar o próximo: <strong>${esc(proximo.titulo)}</strong>?</p>
+        <div class="rodape">
+          <button class="btn" type="button" data-acao="proximo-nao">Agora não</button>
+          <button class="btn principal" type="button" data-acao="proximo-sim">Sim</button>
+        </div>`;
+    }
+
     // ============ Ajustes (fora da barra de abas, pela engrenagem) ============
     function descricaoQuando(x) {
       const base = x.base === 'fim' ? 'do fim' : 'do início';
@@ -1635,6 +1846,12 @@
           <span style="width:72px"></span>
         </div>
         <div class="colunas"><div class="col">
+        <section class="secao"><h2><span>Trilha de estudos</span></h2>
+          <div class="card" style="margin-top:0">
+            <p class="sub">${emAndamento().length} em andamento · ${naFila().length} na fila</p>
+            <div class="botoes"><button class="btn" type="button" data-acao="trilha-abrir">Abrir a trilha</button></div>
+          </div>
+        </section>
         <section class="secao"><h2><span>Modelos</span></h2>
           <p class="vazio">Aparecem no botão + e já preenchem o item, criando junto as tarefas que costumam vir com ele.</p>`;
       if (tela.modeloEditando) {
@@ -1763,6 +1980,28 @@
       // Metas do dia
       html += `<section class="secao"><h2><span>Metas do dia</span></h2><div class="resumo">${htmlCompiladoMetas(diasMes)}</div></section>`;
 
+      // Trilha: sessões de estudo feitas e materiais concluídos no mês
+      let sessoes = 0;
+      let sessoesMinimas = 0;
+      for (const d of diasMes) for (const item of itens) {
+        if (item.tipo !== 'estudo' || !ocorreEm(item, d)) continue;
+        const e = estadoDe(item, d);
+        if (e && e.estado === 'feito') { sessoes++; if (e.minima) sessoesMinimas++; }
+      }
+      const prefixoMes = `${ano}-${String(mes + 1).padStart(2, '0')}`;
+      const concluidosMes = trilha.filter((m) => m.status === 'concluido' && (m.concluidoEm || '').startsWith(prefixoMes))
+        .sort((a, b) => a.concluidoEm.localeCompare(b.concluidoEm));
+      html += `
+        <section class="secao"><h2><span>Trilha</span></h2>
+          <div class="resumo">
+            <div class="total"><strong>${sessoes}</strong> ${sessoes === 1 ? 'sessão de estudo feita' : 'sessões de estudo feitas'}${sessoesMinimas ? ` (${sessoesMinimas} na versão mínima)` : ''}</div>
+            ${concluidosMes.length ? concluidosMes.map((m) => `
+              <div class="concluido-linha" style="${corDoTema(m.tema)}">${icone('check')}<span>${esc(m.titulo)}</span>
+                <small>· ${TIPOS_MATERIAL[m.tipo]} ·</small>${htmlTema(m.tema)}<small>· ${fmtDiaCurto(deChave(m.concluidoEm))}</small></div>`).join('')
+              : '<p class="vazio" style="margin:0">Nenhum material concluído neste mês.</p>'}
+          </div>
+        </section>`;
+
       // Energia
       const comRegistro = passados.filter((d) => registros[chave(d)]);
       const media = comRegistro.length ? comRegistro.reduce((s, d) => s + registros[chave(d)].energia, 0) / comRegistro.length : 0;
@@ -1857,7 +2096,7 @@
     }
 
     // ============ Fluxos guiados ============
-    const PASSOS_FLUXO = { fechamento: 3, planejamento: 4 };
+    const PASSOS_FLUXO = { fechamento: 3, planejamento: 5 };
 
     function htmlProgresso(passo, total) {
       return `<div class="progresso">${Array.from({ length: total }, (_, i) => `<i class="${i <= passo ? 'ok' : ''}"></i>`).join('')}</div>`;
@@ -1869,9 +2108,9 @@
       if (!f) { document.getElementById('fundo-fluxo').hidden = true; return; }
       document.getElementById('fundo-fluxo').hidden = false;
       const rolagem = el.querySelector('.miolo')?.scrollTop || 0;
-      const fluxos = { item: fluxoItem, fechamento: fluxoFechamento, planejamento: fluxoPlanejamento };
+      const fluxos = { item: fluxoItem, fechamento: fluxoFechamento, planejamento: fluxoPlanejamento, proximo: fluxoProximo };
       el.innerHTML = fluxos[f.tipo](f);
-      el.classList.toggle('cheia', f.tipo !== 'item');
+      el.classList.toggle('cheia', f.tipo !== 'item' && f.tipo !== 'proximo');
       el.classList.toggle('larga', f.tipo === 'planejamento'); // no notebook, a semana com os dias lado a lado
       const miolo = el.querySelector('.miolo');
       if (miolo) miolo.scrollTop = rolagem;
@@ -1961,6 +2200,19 @@
             ? htmlCompiladoMetas(dias.filter(desdeOInicio))
             : '<p class="vazio">O app começou a ser usado depois desta semana.</p>'}</div></section>`;
       } else if (f.passo === 1) {
+        // O que está em andamento na trilha, com a opção de concluir ali mesmo.
+        const andamento = emAndamento();
+        const proximo = naFila()[0];
+        const btn = (acao, texto, m) => `<div class="botoes"><button class="btn principal" type="button" data-acao="${acao}" data-mid="${m.id}">${texto}</button></div>`;
+        miolo = `
+          <h2>Ainda no mesmo estudo?<small>Se terminou algum, marque aqui. Se não, é só seguir.</small></h2>
+          ${andamento.length
+            ? `<ul class="itens">${andamento.map((m) => htmlMaterial(m, null, btn('material-concluir', 'Concluí', m))).join('')}</ul>`
+            : proximo
+              ? `<p class="vazio">Nada em andamento. O primeiro da fila é:</p><ul class="itens">${htmlMaterial(proximo, null, btn('material-comecar', 'Começar', proximo))}</ul>`
+              : '<p class="vazio">Nada em andamento e a fila está vazia.</p>'}
+          <div class="botoes gerenciar" style="margin-top:12px"><button class="link" type="button" data-acao="trilha-abrir">Ver a trilha completa ›</button></div>`;
+      } else if (f.passo === 2) {
         // Pendências: o que não tem dia (ou passou) e o que tem dia na próxima semana mas não tem hora.
         const resolver = paraResolver();
         const encaixar = aEncaixar().filter((i) => !estados[i.id]);
@@ -1978,7 +2230,7 @@
           ${encaixar.length ? secao('A encaixar', encaixar.map((i) => htmlItem(i, null, 'encaixar'))) : ''}
           ${semHora.length ? secao('Sem horário na próxima semana', semHora) : ''}
           ${nada ? '<p class="vazio">Nada pendente. Tudo tem dia e hora.</p>' : ''}`;
-      } else if (f.passo === 2) {
+      } else if (f.passo === 3) {
         // A próxima semana, dia a dia, com os avisos de cada dia e um atalho para adicionar.
         let dias = '';
         for (let n = 1; n <= 7; n++) {
@@ -2046,7 +2298,7 @@
       document.getElementById('filtro-tipo').hidden = !comFiltros;
       document.getElementById('topo').classList.toggle('fixo', comFiltros);
       renderFiltros();
-      const telas = { dia: renderDia, lista: renderLista, encaixar: renderEncaixar, calendario: renderCalendario, historico: renderHistorico, ajustes: renderAjustes };
+      const telas = { dia: renderDia, lista: renderLista, encaixar: renderEncaixar, calendario: renderCalendario, historico: renderHistorico, ajustes: renderAjustes, trilha: renderTrilha };
       document.getElementById('conteudo').innerHTML = telas[tela.aba]();
       document.querySelectorAll('.aba').forEach((b) => {
         if (b.dataset.aba === tela.aba) b.setAttribute('aria-current', 'page');
@@ -2132,7 +2384,7 @@
     }
 
     const acoesGerais = {
-      'aba': (b) => { tela.aba = b.dataset.aba; tela.aberto = null; tela.modeloEditando = null; window.scrollTo(0, 0); },
+      'aba': (b) => { tela.aba = b.dataset.aba; tela.aberto = null; tela.modeloEditando = null; tela.materialEditando = null; window.scrollTo(0, 0); },
       'filtro-area': (b) => { tela.area = b.dataset.valor; tela.aberto = null; },
       'filtro-tipo': (b) => { const v = b.dataset.valor; if (tela.tipos.has(v)) tela.tipos.delete(v); else tela.tipos.add(v); tela.aberto = null; },
       'mes': (b) => {
@@ -2211,7 +2463,7 @@
         location.reload();
       },
       'plano-editar': () => {
-        tela.fluxo = { tipo: 'planejamento', passo: 3, dia: chave(HOJE) };
+        tela.fluxo = { tipo: 'planejamento', passo: 4, dia: chave(HOJE) };
       },
       'novo-no-dia': (b) => abrirForm(null, b.dataset.dia),
       'ajustes-abrir': () => { if (tela.aba !== 'ajustes') tela.abaAnterior = tela.aba; tela.aba = 'ajustes'; tela.aberto = null; window.scrollTo(0, 0); },
@@ -2237,6 +2489,77 @@
         if (problema) { avisar(problema); return; }
         tela.modeloEditando = null;
         avisar('Modelo salvo.');
+      },
+      // Trilha de estudos. Aberta de dentro do planejamento, o Voltar retorna ao mesmo passo.
+      'trilha-abrir': () => {
+        if (tela.aba !== 'trilha') {
+          tela.trilhaVolta = { aba: tela.aba, fluxo: tela.fluxo && tela.fluxo.tipo === 'planejamento' ? tela.fluxo : null };
+        }
+        tela.aba = 'trilha';
+        tela.fluxo = null;
+        tela.aberto = null;
+        tela.materialAberto = null;
+        tela.materialEditando = null;
+        window.scrollTo(0, 0);
+      },
+      'trilha-voltar': () => {
+        const volta = tela.trilhaVolta || { aba: 'dia', fluxo: null };
+        tela.aba = volta.aba;
+        tela.fluxo = volta.fluxo;
+        tela.materialEditando = null;
+        window.scrollTo(0, 0);
+      },
+      'trilha-concluidos': () => { tela.trilhaConcluidos = !tela.trilhaConcluidos; },
+      'material-abrir': (b) => {
+        if (tela.fluxo) return; // no planejamento, os botões já ficam à mostra
+        tela.materialAberto = tela.materialAberto === b.dataset.mid ? null : b.dataset.mid;
+      },
+      'material-comecar': (b) => {
+        const m = trilha.find((x) => x.id === b.dataset.mid);
+        m.status = 'andamento';
+        tela.materialAberto = null;
+        avisar(`Começou: ${m.titulo}.`);
+      },
+      'material-concluir': (b) => concluirMaterial(trilha.find((x) => x.id === b.dataset.mid)),
+      'material-fila': (b) => { voltarParaFila(trilha.find((x) => x.id === b.dataset.mid)); tela.materialAberto = null; avisar('Voltou para o começo da fila.'); },
+      'material-subir': (b) => moverMaterial(trilha.find((x) => x.id === b.dataset.mid), -1),
+      'material-descer': (b) => moverMaterial(trilha.find((x) => x.id === b.dataset.mid), 1),
+      'material-excluir': (b) => {
+        const m = trilha.find((x) => x.id === b.dataset.mid);
+        if (!confirm(`Excluir "${m.titulo}" da trilha?`)) return;
+        trilha.splice(trilha.indexOf(m), 1);
+        tela.materialAberto = null;
+        avisar('Excluído da trilha.');
+      },
+      'proximo-sim': () => {
+        const f = tela.fluxo;
+        const m = trilha.find((x) => x.id === f.proximo);
+        m.status = 'andamento';
+        tela.fluxo = f.depois;
+        avisar(`Começou: ${m.titulo}.`);
+      },
+      'proximo-nao': () => { tela.fluxo = tela.fluxo.depois; },
+      'material-novo': () => { tela.materialEditando = { titulo: '', autor: '', tipo: 'livro', tema: '', temaNovo: false }; window.scrollTo(0, 0); },
+      'material-editar': (b) => {
+        const m = trilha.find((x) => x.id === b.dataset.mid);
+        tela.materialEditando = { id: m.id, titulo: m.titulo, autor: m.autor || '', tipo: m.tipo, tema: m.tema, temaNovo: false };
+        window.scrollTo(0, 0);
+      },
+      'material-tipo': (b) => { tela.materialEditando.tipo = b.dataset.valor; },
+      'material-tema': (b) => { tela.materialEditando.tema = b.dataset.valor; tela.materialEditando.temaNovo = false; },
+      'material-tema-novo': () => { tela.materialEditando.tema = ''; tela.materialEditando.temaNovo = true; },
+      'material-cancelar': () => { tela.materialEditando = null; },
+      'material-salvar': () => {
+        const e = tela.materialEditando;
+        const titulo = e.titulo.trim();
+        const tema = e.tema.trim();
+        if (!titulo) { avisar('Escreva o título.'); return; }
+        if (!tema) { avisar('Escolha ou escreva o tema.'); return; }
+        const antigo = trilha.find((x) => x.id === e.id);
+        if (antigo) Object.assign(antigo, { titulo, autor: e.autor.trim(), tipo: e.tipo, tema });
+        else trilha.push({ id: `t${Date.now()}`, titulo, autor: e.autor.trim(), tipo: e.tipo, tema, status: 'fila' });
+        tela.materialEditando = null;
+        avisar(antigo ? 'Material alterado.' : 'Adicionado no fim da fila.');
       },
       'meta-nova': () => { tela.novaMeta = { titulo: '', tipo: 'comecar', quantidade: false, alvo: 1, unidade: '' }; },
       'meta-editar': (b) => {
@@ -2381,6 +2704,7 @@
       }
       // Editor de modelos: guarda o que é digitado sem redesenhar a tela.
       if (tela.modeloEditando && ev.target.dataset.m) tela.modeloEditando[ev.target.dataset.m] = ev.target.value;
+      if (tela.materialEditando && ev.target.dataset.mat) tela.materialEditando[ev.target.dataset.mat] = ev.target.value;
       if (tela.modeloEditando && ev.target.dataset.x) {
         if (ev.target.dataset.x === 'hora') {
           const d = ev.target.value.replace(/\D/g, '').slice(0, 4);
@@ -2560,7 +2884,13 @@
     $('btn-novo').addEventListener('click', () => abrirForm());
     $('f-cancelar').addEventListener('click', fecharForm);
     $('fundo-novo').addEventListener('click', (ev) => { if (ev.target === ev.currentTarget) fecharForm(); });
-    $('fundo-fluxo').addEventListener('click', (ev) => { if (ev.target === ev.currentTarget) { tela.fluxo = null; tela.aberto = null; render(); } });
+    $('fundo-fluxo').addEventListener('click', (ev) => {
+      if (ev.target !== ev.currentTarget) return;
+      // Fora da pergunta "Começar o próximo?" vale como "Agora não".
+      tela.fluxo = tela.fluxo && tela.fluxo.tipo === 'proximo' ? tela.fluxo.depois : null;
+      tela.aberto = null;
+      render();
+    });
     $('f-mais').addEventListener('click', () => { form.detalhes = !form.detalhes; renderForm(); });
 
     $('form-novo').addEventListener('click', (ev) => {
