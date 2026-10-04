@@ -160,6 +160,9 @@
     .etapa.feita .caixa svg { visibility: visible; }
     .etapa.feita span { text-decoration: line-through; color: var(--muted); }
     .etapa.proxima span { font-weight: 700; }
+    .treino-dia { background: var(--cor-clara); border-radius: 10px; padding: 10px; font-size: 0.875rem; display: grid; gap: 4px; }
+    .treino-dia strong { color: var(--cor); }
+    .treino-dia p { margin: 0; white-space: pre-line; color: var(--ink) !important; }
     .planob { background: var(--aviso-claro); color: var(--aviso); border-radius: 10px; padding: 10px; font-size: 0.875rem; display: grid; gap: 8px; }
 
     .botoes { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1067,11 +1070,11 @@
               <div class="meta">${meta.join(' · ')}</div>
             </button>
           </div>
-          ${aberto ? htmlPainel(item, e, contexto) : ''}
+          ${aberto ? htmlPainel(item, e, contexto, d) : ''}
         </li>`;
     }
 
-    function htmlDetalhes(item) {
+    function htmlDetalhes(item, d = null) {
       const linhas = [];
       if (item.local) linhas.push(['Onde', item.local]);
       if (item.levar) linhas.push(['Levar', item.levar]);
@@ -1089,10 +1092,34 @@
             <span class="caixa">${icone('check')}</span><span>${esc(x.texto)}${i === proxima ? ' ← próxima' : ''}</span>
           </button></li>`).join('')}</ul>`;
       }
+      if (item.tipo === 'treino' && d) {
+        const treino = treinoDoDia(d);
+        if (treino) html += `<div class="treino-dia"><strong>Treino do dia</strong><p>${esc(treino)}</p></div>`;
+      }
       return html;
     }
 
-    function htmlPainel(item, e, contexto) {
+    // Plano de treino da semana separado por dia: cada linha que começa com o nome de um
+    // dia ("Segunda…", "1) Terça…") abre o treino daquele dia. Sem dias no texto, vale o texto todo.
+    function treinoDoDia(d) {
+      const texto = planoTreino.trim();
+      if (!texto) return '';
+      const semAcento = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const PREFIXOS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
+      const partes = {};
+      let atual = null;
+      for (const linha of texto.split('\n')) {
+        const m = semAcento(linha.trim()).match(/^(?:\d+[).]\s*)?(domingo|segunda|terca|quarta|quinta|sexta|sabado)(?![a-z])/);
+        if (m) { atual = PREFIXOS.indexOf(m[1].slice(0, 3)); partes[atual] = []; continue; }
+        if (atual === null) continue;
+        const resto = linha.replace(/^\s*plano:\s*/i, '');
+        if (resto.trim() || partes[atual].length) partes[atual].push(resto);
+      }
+      if (atual === null) return texto;
+      return (partes[d.getDay()] || []).join('\n').trim();
+    }
+
+    function htmlPainel(item, e, contexto, d = null) {
       if (tela.painel === 'nao') {
         return `
           <div class="painel">
@@ -1164,7 +1191,7 @@
             </div>
           </div>`;
       }
-      const detalhes = htmlDetalhes(item);
+      const detalhes = htmlDetalhes(item, d);
       const verTrilha = item.tipo === 'estudo'
         ? '<div class="botoes"><button class="btn" type="button" data-acao="trilha-abrir">Ver trilha ›</button></div>'
         : '';
@@ -1476,10 +1503,10 @@
 
       if (doDia.some((i) => i.tipo === 'treino')) {
         html += `
-          <div class="card"><h3>Plano de treino da semana</h3>
-            ${planoTreino.trim()
-              ? `<p style="white-space:pre-line;font-size:0.9375rem">${esc(planoTreino)}</p>`
-              : '<p class="sub">Ainda sem plano desta semana.</p>'}
+          <div class="card"><h3>${ehHoje ? 'Treino de hoje' : 'Treino do dia'}</h3>
+            ${!planoTreino.trim() ? '<p class="sub">Ainda sem plano desta semana.</p>'
+              : treinoDoDia(d) ? `<p style="white-space:pre-line;font-size:0.9375rem">${esc(treinoDoDia(d))}</p>`
+              : '<p class="sub">O plano da semana não tem treino para este dia.</p>'}
             <div class="botoes"><button class="btn" type="button" data-acao="plano-editar">${planoTreino.trim() ? 'Editar o plano' : 'Escrever o plano'}</button></div>
           </div>`;
       }
