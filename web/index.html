@@ -239,6 +239,7 @@
     .energia button[aria-pressed="true"] span { color: #fff; }
     textarea.nota { width: 100%; min-height: 96px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
 
+    .anterior { margin: 12px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--pessoal-claro); color: var(--pessoal); font-size: 0.875rem; font-weight: 600; }
     .numeros { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .numeros div { background: var(--bg); border-radius: 10px; padding: 10px; }
     .numeros strong { display: block; font-size: 1.25rem; }
@@ -2127,12 +2128,38 @@
     }
 
     // Janela de um item, aberta ao tocar num bloco da linha do tempo.
+    // Ordem em que a janela percorre o dia: a mesma da lista, sem os itens de dia todo ou de vários dias.
+    function sequenciaDoDia(d) {
+      return itensDoDia(d, false).filter((i) => !i.diaTodo && !variosDias(i)).map((i) => i.id);
+    }
+
+    // Próximo sem marcação depois do atual; no fim do dia, volta para os anteriores que sobraram.
+    function proximoDoDia(ids, atual, d) {
+      const i = ids.indexOf(atual);
+      const ordem = [...ids.slice(i + 1), ...ids.slice(0, Math.max(i, 0))];
+      return ordem.map((id) => itens.find((x) => x.id === id)).find((x) => x && ocorreEm(x, d) && !estadoDe(x, d)) || null;
+    }
+
     function fluxoItem(f) {
       const item = itens.find((i) => i.id === f.id);
       const d = deChave(f.dia);
-      return `
-        <div class="passos-topo"><span>${fmtDiaLongo(d)}</span><button class="btn" type="button" data-acao="fluxo-fechar">Fechar</button></div>
-        <ul class="itens" style="margin-top:12px">${htmlItem(item, d, 'dia', true)}</ul>`;
+      // Desfez a última marcação: o item volta a aparecer para marcar.
+      if (f.fim && !estadoDe(item, d)) { f.fim = false; f.anterior = null; }
+      const topo = `<div class="passos-topo"><span>${fmtDiaLongo(d)}</span><button class="btn" type="button" data-acao="fluxo-fechar">Fechar</button></div>`;
+      const anterior = f.anterior
+        ? `<p class="anterior">✓ ${esc(f.anterior.titulo)}: ${esc(f.anterior.texto.toLowerCase())}</p>`
+        : '';
+      if (f.fim) {
+        return `${topo}${anterior}
+          <p class="grande" style="margin:16px 0 4px">Tudo marcado neste dia ✓</p>
+          <div class="rodape"><button class="btn principal" type="button" data-acao="fluxo-fechar">Fechar</button></div>`;
+      }
+      const faltam = sequenciaDoDia(d).filter((id) => !estadoDe(itens.find((x) => x.id === id), d)).length;
+      const outro = proximoDoDia(sequenciaDoDia(d), item.id, d);
+      return `${topo}${anterior}
+        ${f.anterior ? `<div class="secao"><h2><span>Próxima · ${faltam === 1 ? 'falta 1 sem marcação' : `faltam ${faltam} sem marcação`}</span></h2></div>` : ''}
+        <ul class="itens" style="margin-top:12px">${htmlItem(item, d, 'dia', true)}</ul>
+        ${outro && !estadoDe(item, d) ? '<div class="botoes" style="margin-top:10px"><button class="btn" type="button" data-acao="item-pular">Pular ›</button></div>' : ''}`;
     }
 
     function fluxoFechamento(f) {
@@ -2363,7 +2390,6 @@
         if (hora) item.hora = hora;
         delete estados[item.id];
       }
-      if (tela.fluxo && tela.fluxo.tipo === 'item') tela.fluxo = null;
       tela.aberto = null;
       avisar(`Agendado para ${rotuloDia(nova)}${hora ? ' às ' + fmtHora(hora) : ''}.`);
     }
@@ -2431,6 +2457,14 @@
         tela.rascunho = { energia: r ? r.energia : null, texto: r ? r.texto : '' };
       },
       'fluxo-fechar': () => { tela.fluxo = null; tela.aberto = null; },
+      'item-pular': () => {
+        const f = tela.fluxo;
+        const d = deChave(f.dia);
+        const proximo = proximoDoDia(sequenciaDoDia(d), f.id, d);
+        if (proximo) tela.fluxo = { tipo: 'item', dia: f.dia, id: proximo.id, anterior: null };
+        tela.painel = 'acoes';
+        tela.motivo = null;
+      },
       'fluxo-prox': () => { tela.fluxo.passo++; tela.aberto = null; },
       'fluxo-voltar': () => { tela.fluxo.passo--; tela.aberto = null; },
       'energia': (b) => { tela.rascunho.energia = Number(b.dataset.valor); },
@@ -2616,6 +2650,9 @@
       const idAberto = `${item.id}|${li.dataset.dia}`;
       // Na janela de um item, o painel fica sempre aberto.
       const naJanela = tela.fluxo && tela.fluxo.tipo === 'item';
+      // Na janela, guarda a ordem do dia antes de marcar, para seguir para o próximo depois.
+      const sequencia = naJanela ? sequenciaDoDia(d) : null;
+      const estavaAberto = !estadoDe(item, d);
 
       switch (acao) {
         case 'abrir':
@@ -2691,6 +2728,14 @@
           break;
         }
         default: return;
+      }
+      // Marcou (ou levou para outro dia) na janela: mostra o próximo sem marcação do dia.
+      if (naJanela && estavaAberto && tela.fluxo && (estadoDe(item, d) || !ocorreEm(item, d))) {
+        const rotulo = estadoDe(item, d) ? textoEstado(estadoDe(item, d)) : `Agendado para ${rotuloDia(deChave(item.data))}`;
+        const proximo = proximoDoDia(sequencia, item.id, d);
+        tela.fluxo = { tipo: 'item', dia: chave(d), id: proximo ? proximo.id : item.id, anterior: { titulo: item.titulo, texto: rotulo }, fim: !proximo };
+        tela.painel = 'acoes';
+        tela.motivo = null;
       }
       render();
     });
