@@ -1171,8 +1171,6 @@
               : `<button class="btn principal" type="button" data-acao="fluxo-abrir" data-fluxo="rotina">${feitos ? `Continuar (${feitos} de ${rotina.length} feitos)` : 'Fazer passo a passo'}</button>`}
             </div>
           </div>`;
-      } else if (ehHoje) {
-        html += '<div class="card"><h3>Rotina da manhã</h3><p class="sub">Hoje não tem rotina da manhã. Use a seta › para ver a de amanhã.</p></div>';
       }
 
       html += `<div class="card"><h3>Metas do dia</h3>${htmlMetasDoDia(d)}</div>`;
