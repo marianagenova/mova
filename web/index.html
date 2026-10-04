@@ -387,6 +387,23 @@
     .rodape { display: flex; gap: 8px; margin-top: 18px; }
     .rodape .btn { flex: 1; padding: 12px; font-size: 1rem; }
     .rodape .btn.principal { --cor: var(--pessoal); }
+    /* Telas largas (notebook): usa mais a largura. No celular nada muda:
+       .colunas e .grade-secoes viram blocos um embaixo do outro, na mesma ordem. */
+    @media (min-width: 900px) {
+      .wrap { max-width: 1120px; }
+      nav.abas .wrap { max-width: 560px; }
+      .fab { right: max(24px, calc(50% - 560px + 24px)); }
+      .colunas { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 0 32px; align-items: start; }
+      .colunas.calendario { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); }
+      .grade-secoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0 24px; align-items: start; }
+      .fundo { align-items: center; }
+      .folha { border-radius: 18px; max-width: 640px; }
+      .folha.cheia { height: 86vh; }
+      .folha.larga { max-width: 1080px; }
+      .folha .grade-secoes { gap: 12px; }
+      .folha .grade-secoes .dia-plano { margin-top: 0; }
+    }
+
   </style>
 </head>
 <body>
@@ -1322,6 +1339,9 @@
         </div>`;
       if (!ehHoje) html += '<div class="botoes" style="justify-content:center;margin-top:8px"><button class="btn" type="button" data-acao="dia-hoje">Voltar para hoje</button></div>';
 
+      // No notebook, duas colunas: à esquerda o que é do momento; à direita a linha do tempo.
+      // No celular, as colunas ficam uma embaixo da outra, na mesma ordem.
+      html += '<div class="colunas"><div class="col">';
       if (ehHoje) html += htmlAgora();
 
       html += `<div class="card"><h3>Metas do dia</h3>${htmlMetasDoDia(d)}</div>`;
@@ -1339,6 +1359,7 @@
           </div>`;
       }
 
+      html += '</div><div class="col">';
       const c = cargaDoDia(d);
       const doDia = itensDoDia(d);
       html += `
@@ -1368,7 +1389,7 @@
             <div class="botoes"><button class="btn" type="button" data-acao="plano-editar">${planoTreino.trim() ? 'Editar o plano' : 'Escrever o plano'}</button></div>
           </div>`;
       }
-      return html;
+      return html + '</div></div>';
     }
 
     // ============ Aba Lista ============
@@ -1399,6 +1420,8 @@
       if (resolver.length) html += secao('Para resolver', resolver.map((i) => htmlItem(i, null, 'resolver')), 'resolver');
       const chegando = prazosChegando();
       if (chegando.length) html += secao('Prazos chegando · escolha um dia', chegando.map((i) => htmlItem(i, null, 'encaixar')));
+      // No notebook, os dias ficam lado a lado.
+      html += '<div class="grade-secoes">';
       for (let n = 0; n < 7; n++) {
         const d = somarDias(HOJE, n);
         const titulo = n === 0 ? `Hoje · ${DIAS[d.getDay()]}, ${d.getDate()}`
@@ -1406,7 +1429,7 @@
           : `${maiuscula(DIAS[d.getDay()])}, ${d.getDate()}`;
         html += secao(titulo, itensDoDia(d).map((i) => htmlItem(i, d, 'dia')), '', 'Nada planejado.', htmlCarga(d));
       }
-      return html;
+      return html + '</div>';
     }
 
     function renderEncaixar() {
@@ -1477,6 +1500,7 @@
       const registro = htmlRegistro(tela.diaSelecionado);
 
       return `
+        <div class="colunas calendario"><div class="col">
         <input class="busca" id="busca" type="search" placeholder="Buscar: quando foi ou quando vai ser?" value="${esc(tela.busca)}">
         <div id="busca-resultados">${htmlBusca(tela.busca)}</div>
         <div class="mes-topo">
@@ -1491,9 +1515,11 @@
           <span><i style="background:var(--nivel-3)"></i>80% ou mais</span>
           <span><i style="background:var(--trabalho);height:4px"></i>trabalho o dia todo</span>
         </div>
+        </div><div class="col">
         <div id="dia-selecionado">${secao(fmtDiaLongo(sel), itensDoDia(sel).map((i) => htmlItem(i, sel, 'dia')), '', 'Nada planejado.', htmlCarga(sel))}</div>
         ${registro ? `<section class="secao"><h2><span>Como foi o dia</span></h2>${registro}</section>` : ''}
-        <div class="botoes" style="margin-top:16px"><button class="btn" type="button" data-acao="ver-mes-hist">Ver os números de ${MESES[mes]} no Histórico</button></div>`;
+        <div class="botoes" style="margin-top:16px"><button class="btn" type="button" data-acao="ver-mes-hist">Ver os números de ${MESES[mes]} no Histórico</button></div>
+        </div></div>`;
     }
 
     function resumoRecorrentes(dias) {
@@ -1608,6 +1634,7 @@
           <h2>Ajustes</h2>
           <span style="width:72px"></span>
         </div>
+        <div class="colunas"><div class="col">
         <section class="secao"><h2><span>Modelos</span></h2>
           <p class="vazio">Aparecem no botão + e já preenchem o item, criando junto as tarefas que costumam vir com ele.</p>`;
       if (tela.modeloEditando) {
@@ -1625,7 +1652,7 @@
           </div>`).join('') || '<p class="vazio">Nenhum modelo.</p>';
         html += '<div class="botoes" style="margin-top:12px"><button class="btn" type="button" data-acao="modelo-novo">+ Novo modelo</button></div>';
       }
-      return html + '</section>' + htmlDados();
+      return html + '</section></div><div class="col">' + htmlDados() + '</div></div>';
     }
 
     function htmlEditorModelo(m) {
@@ -1717,6 +1744,8 @@
       if (futuro) return html + '<p class="vazio">Este mês ainda não começou.</p>';
 
       // Dias que já terminaram (o que se repete) e dias até hoje (metas e registros).
+      // No notebook, os quadros do mês ficam lado a lado.
+      html += '<div class="grade-secoes">';
       const diasMes = diasDoMesAteHoje(ano, mes);
       const passados = diasMes.filter((d) => d < HOJE);
 
@@ -1771,7 +1800,7 @@
           <div class="quando"><span>${fmtDiaLongo(deChave(k))}</span>${htmlPontosEnergia(registros[k].energia)}</div>
           ${registros[k].texto ? `<div>${esc(registros[k].texto)}</div>` : '<div class="vazio" style="padding:0">Sem texto.</div>'}
         </div>`).join('') || '<p class="vazio">Nenhum registro neste mês.</p>'}</div></section>`;
-      return html;
+      return html + '</div>';
     }
 
     // Próxima vez (a partir de hoje) ou última vez (antes de hoje) em que o item acontece, até 1 ano.
@@ -1843,6 +1872,7 @@
       const fluxos = { item: fluxoItem, fechamento: fluxoFechamento, planejamento: fluxoPlanejamento };
       el.innerHTML = fluxos[f.tipo](f);
       el.classList.toggle('cheia', f.tipo !== 'item');
+      el.classList.toggle('larga', f.tipo === 'planejamento'); // no notebook, a semana com os dias lado a lado
       const miolo = el.querySelector('.miolo');
       if (miolo) miolo.scrollTop = rolagem;
     }
@@ -1974,7 +2004,7 @@
         }
         miolo = `
           <h2>A próxima semana<small>Toque num item para editar ou reagendar. Acima de ${fmtDur(LIMITE_DIA_PESADO)}, o dia aparece como pesado.</small></h2>
-          ${dias}`;
+          <div class="grade-secoes">${dias}</div>`;
       } else {
         miolo = `
           <h2>Plano de treino da semana<small>Cole aqui o plano feito fora do app. Ele aparece nos dias com treino.</small></h2>

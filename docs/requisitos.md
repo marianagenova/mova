@@ -186,7 +186,7 @@ Uma tela guiada para os 15 minutos de domingo:
 - Minimalista, mas colorido: uma cor por área (Trabalho e Pessoal).
 - Sem modo escuro.
 - Sem animações e sem sons.
-- Pensado primeiro para o celular, funcionando bem também no notebook.
+- Pensado primeiro para o celular, funcionando bem também no notebook. Em telas largas (a partir de 900 px), o app usa mais a largura: o Dia em duas colunas (o momento à esquerda, a linha do tempo à direita), a Lista com os dias lado a lado, o Calendário com o mês e o dia escolhido lado a lado, o Histórico e os Ajustes com os quadros lado a lado, e as janelas no meio da tela (o planejamento com a semana em colunas). No celular, nada muda.
 
 ## 6. Decisões técnicas
 
