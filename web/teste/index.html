@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mova</title>
+  <meta name="theme-color" content="#2e7d6b">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="icon" href="../icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="../icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Mova</h1>
+    <p>Teste de notificações · <a href="../">voltar ao app</a></p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Situação</h2>
+      <dl class="status">
+        <dt>Service worker</dt><dd id="st-sw">verificando…</dd>
+        <dt>Instalado na tela inicial</dt><dd id="st-installed">verificando…</dd>
+        <dt>Permissão de notificação</dt><dd id="st-permission">verificando…</dd>
+        <dt>Inscrição para push</dt><dd id="st-push">verificando…</dd>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Testes</h2>
+      <div class="actions">
+        <button id="btn-enable" type="button">1. Ativar notificações</button>
+        <button id="btn-local" type="button">2. Notificação local</button>
+        <div class="row">
+          <button id="btn-server" type="button">3. Push pelo servidor</button>
+          <select id="delay" aria-label="Quando enviar">
+            <option value="0">agora</option>
+            <option value="30">em 30 s</option>
+            <option value="120" selected>em 2 min</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint">No teste 3, depois de tocar no botão, feche o app e bloqueie a tela. A notificação mostra o horário em que saiu do servidor, para comparar com o horário em que chegou.</p>
+    </section>
+
+    <section>
+      <h2>Registro</h2>
+      <ul id="log" class="log"></ul>
+    </section>
+  </main>
+</body>
+</html>

@@ -7,6 +7,7 @@ Objetivo: site publicado, instalável no celular e uma notificação push de tes
 | Arquivo | Para que serve |
 |---|---|
 | `web/` | O app (HTML, CSS e JS puros, sem etapa de build), publicado como está |
+| `web/teste/` | A tela de teste de notificações usada nesta fase |
 | `web/sw.js` | Service worker: permite instalar e recebe as notificações |
 | `web/config.js` | URL e chave pública do Supabase e chave pública VAPID |
 | `supabase/functions/send-test-push/` | Edge Function que envia o push de teste |

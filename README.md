@@ -61,6 +61,6 @@ Cada fase já deve ser usável sozinha.
 
 ## Como rodar
 
-O app fica em [web/](web/) e é HTML, CSS e JS puros, sem etapa de build. A cada push na `main`, ele é publicado no GitHub Pages pelo workflow [.github/workflows/pages.yml](.github/workflows/pages.yml).
+O app fica em [web/index.html](web/index.html) e é HTML, CSS e JS puros, sem etapa de build. Nesta versão de teste, os dados ficam salvos só no aparelho (armazenamento do navegador), com exportação e importação de backup na aba Histórico. A tela de teste de notificações fica em [web/teste/](web/teste/). A cada push na `main`, ele é publicado no GitHub Pages pelo workflow [.github/workflows/pages.yml](.github/workflows/pages.yml).
 
 A configuração do Supabase, das chaves de notificação e do teste no celular está em [docs/fase-0.md](docs/fase-0.md).

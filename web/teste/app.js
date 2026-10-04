@@ -1,4 +1,4 @@
-import { config } from './config.js';
+import { config } from '../config.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -76,8 +76,8 @@ async function showLocalNotification() {
   const registration = await navigator.serviceWorker.ready;
   await registration.showNotification('Mova', {
     body: 'Notificação local funcionando.',
-    icon: 'icons/icon-192.png',
-    badge: 'icons/badge-96.png',
+    icon: '../icons/icon-192.png',
+    badge: '../icons/badge-96.png',
   });
   log('Notificação local exibida.');
 }
@@ -131,7 +131,7 @@ async function start() {
     setStatus('st-sw', false, 'não suportado');
     return;
   }
-  await navigator.serviceWorker.register('sw.js');
+  await navigator.serviceWorker.register('../sw.js');
   await navigator.serviceWorker.ready;
   setStatus('st-sw', true, 'ativo');
 

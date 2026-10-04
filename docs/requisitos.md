@@ -231,4 +231,4 @@ Exemplo de repetição com horário fixo: sobrancelha, todo sábado às 15h.
 
 Cada fase já deve ser usável sozinha, para ajustar o rumo com base no uso real.
 
-**[em aberto]** As funcionalidades de 4.9 a 4.15 (incluindo as metas do dia, 4.9.1), testadas na prévia (`web/previa/`), ainda precisam ser distribuídas nas fases.
+**[em aberto]** As funcionalidades de 4.9 a 4.15 (incluindo as metas do dia, 4.9.1) estão na versão de teste do app (`web/index.html`, com dados salvos só no aparelho) e ainda precisam ser distribuídas nas fases.
