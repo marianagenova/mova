@@ -2046,8 +2046,8 @@
     // ============ Cadastro rápido ============
     const MODELOS = {
       viagem: {
-        nome: 'Viagem de trabalho', tipo: 'compromisso', area: 'trabalho', titulo: 'Viagem a ', diaTodo: true, dias: 2,
-        extras: 'Também cria: "Fazer a mala" na véspera, às 20h, com a lista da mala, e "Reembolso da viagem" em "A encaixar", com prazo de 5 dias depois da volta.',
+        nome: 'Viagem de trabalho', tipo: 'compromisso', area: 'trabalho', titulo: 'Viagem a ', dias: 2,
+        extras: 'Também cria: "Fazer a mala" na véspera, às 20h, com a lista da mala.',
       },
       consulta: {
         nome: 'Consulta', tipo: 'compromisso', area: 'pessoal', titulo: 'Consulta ', duracao: 60,
@@ -2343,10 +2343,8 @@
       if (form.modelo && item.data) {
         const vespera = chave(somarDias(deChave(item.data), -1));
         if (form.modelo === 'viagem') {
-          const volta = item.ate || item.data;
           itens.push({ id: novoId(), titulo: 'Fazer a mala', tipo: 'tarefa', area: 'pessoal', data: vespera, hora: '20:00', duracao: 30,
             etapas: ['Roupas', 'Carregadores', 'Documentos e cartão de embarque', 'Remédios'].map((texto) => ({ texto, feita: false })) });
-          itens.push({ id: novoId(), titulo: `Reembolso · ${titulo}`, tipo: 'tarefa', area: 'trabalho', prazo: chave(somarDias(deChave(volta), 5)), duracao: 30 });
         }
         if (form.modelo === 'consulta') {
           itens.push({ id: novoId(), titulo: 'Separar documentos e exames', tipo: 'tarefa', area: 'pessoal', data: vespera, hora: '20:00', duracao: 15 });
