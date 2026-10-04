@@ -1069,29 +1069,38 @@
       return itensDoDia(d, false).filter((i) => i.hora && !i.diaTodo);
     }
 
+    function minutosAgora() { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+
+    // Atividade do momento, o que vem a seguir e o que já passou sem marcação,
+    // tudo marcável ali mesmo.
     function htmlAgora() {
-      const agora = AGORA.getHours() * 60 + AGORA.getMinutes();
+      const agora = minutosAgora();
       const blocos = itensDoDia(HOJE, false).filter((i) => i.hora && !i.diaTodo)
         .map((i) => ({ i, a: minutos(i.hora), b: minutos(i.hora) + duracaoDe(i) }));
-      const atual = blocos.find((x) => x.a <= agora && agora < x.b);
+      const atuais = blocos.filter((x) => x.a <= agora && agora < x.b);
       const proximo = blocos.find((x) => x.a > agora && !estadoDe(x.i, HOJE));
+      const passados = blocos.filter((x) => x.b <= agora && !estadoDe(x.i, HOJE));
       const fechado = Boolean(estados['fechamento|' + chave(HOJE)]);
 
       let html = '<div class="card agora"><h3>Agora</h3>';
-      html += atual
-        ? `<p class="grande">${esc(atual.i.titulo)}</p><p class="sub">até ${fmtMin(atual.b)}</p>`
+      html += atuais.length
+        ? `<ul class="itens">${atuais.map((x) => htmlItem(x.i, HOJE, 'dia')).join('')}</ul>`
         : '<p class="grande">Livre</p>';
       if (proximo) {
         html += `<p class="sub" style="margin-top:10px"><strong>A seguir:</strong> ${esc(proximo.i.titulo)} às ${fmtHora(proximo.i.hora)} · em ${fmtDur(proximo.a - agora)}</p>`;
       } else {
         html += '<p class="sub" style="margin-top:10px">Nada mais com horário hoje.</p>';
       }
+      if (passados.length) {
+        html += `<h3 style="margin-top:16px">Já passou o horário · falta marcar</h3>
+          <ul class="itens">${passados.map((x) => htmlItem(x.i, HOJE, 'dia')).join('')}</ul>`;
+      }
       html += '</div>';
 
       html += `
         <div class="card">
           <h3>Fechar o dia</h3>
-          <p class="sub">${fechado ? 'Dia fechado. Você pode abrir de novo para ajustar.' : 'Decidir o que ficou em aberto e registrar como foi o dia.'}</p>
+          <p class="sub">${fechado ? 'Dia fechado. Você pode abrir de novo para ajustar.' : 'Marcar o que ainda estiver sem marcação, as metas, e registrar como foi o dia.'}</p>
           <div class="botoes"><button class="btn ${fechado ? '' : 'principal'}" type="button" data-acao="fluxo-abrir" data-fluxo="fechamento">${fechado ? 'Rever o fechamento' : 'Fechar o dia'}</button></div>
         </div>`;
       if (HOJE.getDay() === 0) {
@@ -1139,7 +1148,7 @@
           </button>`;
       }
       if (chave(d) === chave(HOJE)) {
-        const agora = AGORA.getHours() * 60 + AGORA.getMinutes();
+        const agora = minutosAgora();
         if (agora >= ini && agora <= fim) html += `<div class="tl-agora" style="top:${(agora - ini) * PX}px"></div>`;
       }
       return html + '</div>';
@@ -1575,9 +1584,9 @@
       if (f.passo === 0) {
         const abertos = itensDoDia(d, false).filter((i) => !estadoDe(i, d) && !i.diaTodo);
         miolo = `
-          <h2>O que ficou em aberto<small>Decida cada item: feito, não fazer ou reagendar.</small></h2>
+          <h2>Itens de hoje sem marcação<small>Se você marcou tudo durante o dia, esta lista fica vazia. Para cada item que sobrou: feito, não fiz ou reagendar.</small></h2>
           ${abertos.length ? `<ul class="itens">${abertos.map((i) => htmlItem(i, d, 'dia')).join('')}</ul>`
-            : '<p class="vazio">Tudo decidido. Nenhum item em aberto.</p>'}`;
+            : '<p class="vazio">Tudo marcado. Pode seguir para o próximo passo.</p>'}`;
       } else if (f.passo === 1) {
         miolo = `
           <h2>Metas do dia<small>Marque cada uma. O compilado sai no fim do mês.</small></h2>
@@ -2216,6 +2225,13 @@
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && chave(new Date()) !== chave(HOJE)) location.reload();
     });
+
+    // Com o app aberto na aba Dia, atualiza o "Agora" a cada minuto
+    // (só quando nada está aberto, para não atrapalhar o que você está fazendo).
+    setInterval(() => {
+      const ocupado = tela.fluxo || tela.aberto || tela.novaMeta || !$('fundo-novo').hidden;
+      if (tela.aba === 'dia' && !ocupado && document.visibilityState === 'visible') render();
+    }, 60000);
 
     // O service worker permite instalar o app e receber notificações.
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
