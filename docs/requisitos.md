@@ -97,6 +97,7 @@ Uma tarefa agendada que não foi feita no dia planejado fica pendente, de forma 
 ### 4.4 Calendário e resumo do mês
 - Calendário com compromissos, tarefas, treinos e estudos, e os dias coloridos conforme o quanto foi concluído.
 - Ao tocar num dia: os itens daquele dia e o registro "como foi o dia".
+- **Busca** no topo do calendário, em itens, notas, etapas e diário: mostra quando aconteceu ou vai acontecer (para o que se repete, a última e a próxima vez). Tocar numa data leva o calendário até aquele dia.
 - Os números do mês (por item que se repete, metas, energia) ficam no Histórico (ver 4.15), e não no calendário.
 
 ### 4.4.1 Uma função para cada aba
@@ -107,7 +108,7 @@ Cada informação aparece em um lugar só:
 | Dia | Fazer o dia de hoje: agora (com o que já passou sem marcação), metas, linha do tempo e fechar o dia |
 | Lista | Os próximos dias: para resolver, prazos chegando e os próximos 7 dias |
 | A encaixar | Tarefas sem dia para fazer |
-| Calendário | O mês e o que aconteceu em cada dia |
+| Calendário | O mês, o que aconteceu em cada dia e a busca (quando foi ou quando vai ser) |
 | Histórico | Todos os números, por mês: o compilado do mês |
 
 O planejamento de domingo é a única exceção: mostra os números da semana, porque faz parte do ritual de planejar.
@@ -174,7 +175,6 @@ Uma tela guiada para os 15 minutos de domingo:
 ### 4.15 Detalhes, histórico e busca
 - **Detalhes no item:** onde, o que levar e observações.
 - **Histórico, por mês** (com setas para trocar o mês): percentual concluído e números de tudo o que se repete (com a versão mínima separada), metas do dia, energia, motivos de "não fiz" e diário. É o compilado do mês.
-- **Busca** em itens, notas, etapas e diário.
 
 ## 5. Visual
 

@@ -281,6 +281,8 @@
     .resultado { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 0.875rem; }
     .resultado strong { display: block; }
     .resultado span { color: var(--muted); }
+    .resultado .botoes { margin-top: 8px; }
+    .resultado .botoes span { align-self: center; }
 
     /* Navegação */
     nav.abas {
@@ -1339,6 +1341,8 @@
       const registro = htmlRegistro(tela.diaSelecionado);
 
       return `
+        <input class="busca" id="busca" type="search" placeholder="Buscar: quando foi ou quando vai ser?" value="${esc(tela.busca)}">
+        <div id="busca-resultados">${htmlBusca(tela.busca)}</div>
         <div class="mes-topo">
           <button class="btn" type="button" data-acao="mes" data-passo="-1" aria-label="Mês anterior">‹</button>
           <h2>${maiuscula(MESES[mes])} ${ano}</h2>
@@ -1351,7 +1355,7 @@
           <span><i style="background:var(--nivel-3)"></i>80% ou mais</span>
           <span><i style="background:var(--trabalho);height:4px"></i>trabalho o dia todo</span>
         </div>
-        ${secao(fmtDiaLongo(sel), itensDoDia(sel).map((i) => htmlItem(i, sel, 'dia')), '', 'Nada planejado.', htmlCarga(sel))}
+        <div id="dia-selecionado">${secao(fmtDiaLongo(sel), itensDoDia(sel).map((i) => htmlItem(i, sel, 'dia')), '', 'Nada planejado.', htmlCarga(sel))}</div>
         ${registro ? `<section class="secao"><h2><span>Como foi o dia</span></h2>${registro}</section>` : ''}
         <div class="botoes" style="margin-top:16px"><button class="btn" type="button" data-acao="ver-mes-hist">Ver os números de ${MESES[mes]} no Histórico</button></div>`;
     }
@@ -1439,8 +1443,7 @@
       const ehMesAtual = ano === HOJE.getFullYear() && mes === HOJE.getMonth();
       const futuro = tela.mesHist > HOJE;
 
-      let html = `<input class="busca" id="busca" type="search" placeholder="Buscar em tudo: itens, notas e diário" value="${esc(tela.busca)}">
-        <div id="busca-resultados">${htmlBusca(tela.busca)}</div>
+      let html = `
         <div class="mes-topo">
           <button class="btn" type="button" data-acao="hist-mes" data-passo="-1" aria-label="Mês anterior">‹</button>
           <h2>${maiuscula(MESES[mes])} ${ano}${ehMesAtual ? ' <small style="font-weight:400;color:var(--muted)">até hoje</small>' : ''}</h2>
@@ -1506,11 +1509,21 @@
       return html + htmlDados();
     }
 
-    function proximaOcorrencia(item) {
-      for (let n = 0; n < 60; n++) { const d = somarDias(HOJE, n); if (ocorreEm(item, d)) return d; }
+    // Próxima vez (a partir de hoje) ou última vez (antes de hoje) em que o item acontece, até 1 ano.
+    function ocorrenciaMaisProxima(item, sentido) {
+      for (let n = sentido > 0 ? 0 : 1; n <= 366; n++) {
+        const d = somarDias(HOJE, n * sentido);
+        if (ocorreEm(item, d)) return d;
+      }
       return null;
     }
 
+    function fmtData(d) {
+      const ano = d.getFullYear() !== HOJE.getFullYear() ? ` de ${d.getFullYear()}` : '';
+      return `${DIAS_CURTOS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()].slice(0, 3)}${ano}`;
+    }
+
+    // Busca do calendário: cada resultado leva ao dia em que aconteceu ou vai acontecer.
     function htmlBusca(q) {
       const termo = q.trim().toLowerCase();
       if (termo.length < 2) return '';
@@ -1518,14 +1531,34 @@
       const achados = itens.filter((i) => achaEm(i.titulo, i.notas, i.local, i.levar, i.minima, ...(i.etapas || []).map((x) => x.texto)));
       const diario = Object.keys(registros).filter((k) => achaEm(registros[k].texto)).sort().reverse();
       if (!achados.length && !diario.length) return '<p class="vazio" style="margin-top:10px">Nada encontrado.</p>';
+
+      const irPara = (d, rotulo) => `<button class="btn" type="button" data-acao="ir-dia" data-dia="${chave(d)}">${rotulo}${fmtData(d)}</button>`;
       return `<div style="display:grid;gap:6px;margin-top:10px">
         ${achados.map((i) => {
-          const prox = proximaOcorrencia(i);
-          const onde = i.regra ? `${textoRegra(i.regra)}${prox ? ' · próxima: ' + rotuloDia(prox) : ''}`
-            : i.data ? rotuloDia(deChave(i.data)) : 'A encaixar';
-          return `<div class="resultado"><strong>${esc(i.titulo)}</strong><span>${TIPOS[i.tipo]} · ${AREAS[i.area]} · ${onde}</span></div>`;
+          let quando;
+          if (i.regra) {
+            const ultima = ocorrenciaMaisProxima(i, -1);
+            const proxima = ocorrenciaMaisProxima(i, 1);
+            quando = [ultima && irPara(ultima, 'Última: '), proxima && irPara(proxima, 'Próxima: ')].filter(Boolean).join('')
+              || '<span>Sem datas no último ano nem no próximo.</span>';
+          } else if (i.data) {
+            quando = irPara(deChave(i.data), '');
+          } else {
+            quando = `<span>A encaixar, ainda sem dia</span>${i.prazo ? irPara(deChave(i.prazo), 'Prazo: ') : ''}`;
+          }
+          return `
+            <div class="resultado">
+              <strong>${esc(i.titulo)}</strong>
+              <span>${TIPOS[i.tipo]} · ${AREAS[i.area]}${i.regra ? ' · ' + textoRegra(i.regra) : ''}</span>
+              <div class="botoes">${quando}</div>
+            </div>`;
         }).join('')}
-        ${diario.map((k) => `<div class="resultado"><strong>Diário · ${fmtDiaLongo(deChave(k))}</strong><span>${esc(registros[k].texto)}</span></div>`).join('')}
+        ${diario.map((k) => `
+          <div class="resultado">
+            <strong>Diário</strong>
+            <span>${esc(registros[k].texto)}</span>
+            <div class="botoes">${irPara(deChave(k), '')}</div>
+          </div>`).join('')}
       </div>`;
     }
 
@@ -1774,6 +1807,14 @@
         tela.aberto = null;
       },
       'dia-cal': (b) => { tela.diaSelecionado = b.dataset.dia; tela.aberto = null; },
+      'ir-dia': (b) => {
+        const d = deChave(b.dataset.dia);
+        tela.diaSelecionado = b.dataset.dia;
+        tela.mes = new Date(d.getFullYear(), d.getMonth(), 1);
+        tela.aberto = null;
+        // Depois de desenhar, rola até o dia escolhido.
+        setTimeout(() => document.getElementById('dia-selecionado')?.scrollIntoView({ block: 'start' }), 0);
+      },
       'dia-nav': (b) => { tela.dia = chave(somarDias(deChave(tela.dia), Number(b.dataset.passo))); tela.aberto = null; },
       'dia-hoje': () => { tela.dia = chave(HOJE); tela.aberto = null; },
       'bloco': (b) => { tela.fluxo = { tipo: 'item', id: b.dataset.id, dia: b.dataset.dia }; tela.painel = 'acoes'; tela.motivo = null; },
