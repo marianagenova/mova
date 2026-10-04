@@ -65,7 +65,7 @@ Preencha `supabaseUrl`, `supabaseAnonKey` e `vapidPublicKey`. Esses três valore
 
 ## Critério de pronto
 
-- [ ] Site publicado no GitHub Pages
-- [ ] App instalado na tela inicial do Samsung
-- [ ] Notificação local aparecendo
-- [ ] Push do servidor chegando com o app fechado e a tela bloqueada, com atraso aceitável
+- [x] Site publicado no GitHub Pages
+- [x] App instalado na tela inicial do Samsung
+- [x] Notificação local aparecendo
+- [x] Push do servidor chegando com o app fechado e a tela bloqueada, com atraso aceitável

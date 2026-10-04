@@ -51,7 +51,7 @@ Cada fase já deve ser usável sozinha.
 
 | Fase | Entrega | Status |
 |---|---|---|
-| 0 | Base técnica: repositório, site publicado, instalável no celular e notificação de teste no Samsung | Em andamento |
+| 0 | Base técnica: repositório, site publicado, instalável no celular e notificação de teste no Samsung | Concluída |
 | 1 | Login, banco de dados, lista principal e cadastro rápido | — |
 | 2 | Repetições e ações (feito, não fazer, reagendar) | — |
 | 3 | Lembretes por item e resumo das 20h | — |
