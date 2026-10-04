@@ -334,7 +334,10 @@
       position: fixed; z-index: 40; left: 50%; transform: translateX(-50%);
       bottom: calc(144px + env(safe-area-inset-bottom, 0px));
       background: var(--ink); color: #fff; border-radius: 10px; padding: 10px 14px; font-size: 0.875rem;
-      max-width: calc(100% - 32px);
+      max-width: calc(100% - 32px); display: flex; align-items: center; gap: 14px;
+    }
+    .aviso-salvo button {
+      border: 0; background: none; color: #9fe0cc; font-weight: 700; padding: 4px 0; white-space: nowrap;
     }
 
     /* Folhas (cadastro e fluxos) */
@@ -928,7 +931,10 @@
       return `
         <li class="${classes}" data-id="${item.id}" data-dia="${dia}">
           <div class="linha">
-            <button class="check" type="button" data-acao="check" aria-label="Marcar como feito">${icone('check')}</button>
+            ${tela.fluxo && tela.fluxo.tipo === 'planejamento'
+              // No planejamento não há o círculo de "feito", para não marcar sem querer.
+              ? ''
+              : `<button class="check" type="button" data-acao="check" aria-label="Marcar como feito">${icone('check')}</button>`}
             <button class="corpo" type="button" data-acao="abrir" aria-expanded="${aberto}">
               <div class="titulo">${icone(item.tipo === 'tarefa' && item.regra ? 'repete' : item.tipo)}<span>${esc(item.titulo)}</span></div>
               <div class="meta">${meta.join(' · ')}</div>
@@ -1981,12 +1987,32 @@
 
     // ============ Ações ============
     let timerAviso;
-    function avisar(texto) {
+    // Aviso rápido no rodapé. Com "desfazer", mostra o botão Desfazer por mais tempo.
+    let desfazerAviso = null;
+    function avisar(texto, desfazer = null) {
       const el = document.getElementById('aviso-salvo');
-      el.textContent = texto;
+      el.innerHTML = `<span>${esc(texto)}</span>${desfazer ? '<button type="button" id="aviso-desfazer">Desfazer</button>' : ''}`;
+      desfazerAviso = desfazer;
       el.hidden = false;
       clearTimeout(timerAviso);
-      timerAviso = setTimeout(() => { el.hidden = true; }, 2800);
+      timerAviso = setTimeout(() => { el.hidden = true; desfazerAviso = null; }, desfazer ? 6000 : 2800);
+    }
+
+    document.getElementById('aviso-salvo').addEventListener('click', (ev) => {
+      if (ev.target.id !== 'aviso-desfazer' || !desfazerAviso) return;
+      desfazerAviso();
+      desfazerAviso = null;
+      document.getElementById('aviso-salvo').hidden = true;
+      render();
+    });
+
+    // Marca como feito e oferece desfazer, para um toque sem querer não sumir com o item.
+    function marcarFeito(k, minima = false) {
+      const anterior = estados[k];
+      estados[k] = minima ? { estado: 'feito', minima: true } : { estado: 'feito' };
+      avisar(minima ? 'Feito na versão mínima.' : 'Marcado como feito.', () => {
+        if (anterior) estados[k] = anterior; else delete estados[k];
+      });
     }
 
     // Leva o item (ou só aquela ocorrência, se ele se repete) para outro dia e, se vier, outra hora.
@@ -2188,13 +2214,13 @@
         case 'check': {
           const e = estadoDe(item, d);
           if (e && e.estado === 'feito') delete estados[k];
-          else estados[k] = { estado: 'feito' };
+          else marcarFeito(k);
           tela.aberto = null;
           tela.painel = 'acoes';
           break;
         }
-        case 'feito': estados[k] = { estado: 'feito' }; tela.aberto = null; tela.painel = 'acoes'; break;
-        case 'minima': estados[k] = { estado: 'feito', minima: true }; tela.aberto = null; tela.painel = 'acoes'; break;
+        case 'feito': marcarFeito(k); tela.aberto = null; tela.painel = 'acoes'; break;
+        case 'minima': marcarFeito(k, true); tela.aberto = null; tela.painel = 'acoes'; break;
         case 'nao': tela.painel = 'nao'; tela.motivo = null; break;
         case 'motivo': tela.motivo = tela.motivo === alvo.dataset.valor ? null : alvo.dataset.valor; break;
         case 'planob': usarPlanoB(item, d); tela.aberto = null; tela.painel = 'acoes'; break;

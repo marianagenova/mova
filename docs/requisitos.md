@@ -91,6 +91,8 @@ Cada item terá botões claros para:
 - **Não fazer** — o app pergunta em seguida se conta como **falha** ou como **neutro** no histórico.
 - **Reagendar** (ou **Agendar**, para o que ainda não tem dia): mostra os próximos 7 dias com a carga já planejada em cada um (ex.: "Ter, 6 · 2h", "pesado"), "Outra data" e o campo de hora, opcional. No planejamento de domingo, os 7 dias começam na segunda.
 
+Ao marcar como feito, aparece por alguns segundos o aviso "Marcado como feito · Desfazer", para desfazer um toque sem querer. No planejamento da semana não há o círculo de feito, porque ali a ideia é organizar.
+
 Cada item também pode ser **editado** ou **excluído**. Ao excluir um item que se repete, o app pergunta o que excluir: **só este dia**, **este e os próximos** (a repetição termina no dia anterior e o histórico continua) ou **todos, inclusive o histórico**.
 
 Uma tarefa agendada que não foi feita no dia planejado fica pendente, de forma neutra, e não aparece como vencida.
