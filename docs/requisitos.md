@@ -83,12 +83,13 @@ Cadastrar um item novo deve ser fácil e rápido (hoje essa é a maior dor).
 - **Opcionais, com padrões prontos:** repetição e lembrete.
 - Tudo é classificado na hora do cadastro.
 - A hora é digitada direto, com o teclado de números (ex.: 1430 vira 14:30), sem o relógio do Android.
+- Na repetição por dias específicos da semana, já vem marcado o dia da semana da data escolhida, e ele acompanha a data até ser mudado à mão.
 
 ### 4.3 Marcar, não fazer e reagendar
 Cada item terá botões claros para:
 - **Feito**
 - **Não fazer** — o app pergunta em seguida se conta como **falha** ou como **neutro** no histórico.
-- **Reagendar**
+- **Reagendar** (ou **Agendar**, para o que ainda não tem dia): mostra os próximos 7 dias com a carga já planejada em cada um (ex.: "Ter, 6 · 2h", "pesado"), "Outra data" e o campo de hora, opcional. No planejamento de domingo, os 7 dias começam na segunda.
 
 Cada item também pode ser **editado** ou **excluído**. Ao excluir um item que se repete, o app pergunta o que excluir: **só este dia**, **este e os próximos** (a repetição termina no dia anterior e o histórico continua) ou **todos, inclusive o histórico**.
 
@@ -170,8 +171,8 @@ Modelos criam um item já preenchido e as tarefas que costumam vir junto. Eles s
 ### 4.14 Planejamento da semana (domingo)
 Uma tela guiada para os 15 minutos de domingo:
 1. Como foi a semana: percentual concluído, versão mínima, falhas, energia média e números por item que se repete.
-2. Prazos e tarefas a encaixar, com o botão de agendar.
-3. Carga dos próximos 7 dias, dias pesados, sobreposições e conflitos com Trabalho.
+2. Pendências: o que ficou para trás, as tarefas a encaixar e as tarefas da próxima semana que ainda não têm horário ("Definir horário").
+3. A próxima semana, dia a dia: o que está planejado em cada dia (tocar abre o item), a carga do dia, sobreposições e conflitos com Trabalho dentro do próprio dia, e "+ Adicionar neste dia", que abre o cadastro com a data preenchida.
 4. Plano de treino da semana (texto).
 
 ### 4.15 Detalhes, histórico e busca

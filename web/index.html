@@ -153,6 +153,19 @@
     .botoes { display: flex; flex-wrap: wrap; gap: 6px; }
     .botoes.gerenciar { gap: 16px; }
     .botoes.coluna { flex-direction: column; align-items: stretch; }
+    .dia-plano { display: grid; gap: 8px; }
+    .dia-plano-topo { display: flex; justify-content: space-between; align-items: baseline; }
+    .dia-plano-topo span { color: var(--muted); font-size: 0.875rem; }
+    .dia-plano-topo span.pesada { color: var(--aviso); font-weight: 700; }
+    .dia-plano .card.aviso { margin-top: 0; }
+    .dias-opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
+    .dia-opcao { display: grid; gap: 2px; text-align: center; padding: 8px 4px; }
+    .dia-opcao small { font-weight: 400; color: var(--muted); font-size: 0.75rem; }
+    .dia-opcao.pesado small { color: var(--aviso); font-weight: 700; }
+    .dia-opcao[aria-pressed="true"] small { color: #fff; }
+    label.outra-data { justify-self: start; }
+    label.outra-data[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .painel input.hora { width: 96px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 1.0625rem; text-align: center; }
     .link { background: none; border: 0; padding: 4px 0; color: var(--muted); font-size: 0.8125rem; text-decoration: underline; }
     .btn {
       border: 1px solid var(--line); background: var(--card); border-radius: 10px;
@@ -214,13 +227,6 @@
     .energia button[aria-pressed="true"] span { color: #fff; }
     textarea.nota { width: 100%; min-height: 96px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
 
-    .barras-dias { display: grid; gap: 8px; }
-    .barra-dia { display: grid; grid-template-columns: 64px 1fr 56px; gap: 8px; align-items: center; font-size: 0.875rem; }
-    .barra-dia .trilho { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
-    .barra-dia .trilho i { display: block; height: 100%; background: var(--pessoal); }
-    .barra-dia.pesada .trilho i { background: #d99a00; }
-    .barra-dia.pesada b { color: var(--aviso); }
-    .barra-dia b { text-align: right; }
     .numeros { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .numeros div { background: var(--bg); border-radius: 10px; padding: 10px; }
     .numeros strong { display: block; font-size: 1.25rem; }
@@ -860,6 +866,7 @@
       diaSelecionado: chave(HOJE),
       fluxo: null,        // { tipo: 'item' | 'fechamento' | 'planejamento', passo, dia, id }
       rascunho: { energia: null, texto: '' },
+      agendar: { dia: null, hora: '' }, // dia e hora escolhidos no Agendar/Reagendar
       novaMeta: null,     // { titulo, tipo } enquanto cria uma meta
       busca: '',
     };
@@ -973,15 +980,31 @@
           </div>`;
       }
       if (tela.painel === 'reagendar') {
+        // Os próximos 7 dias com a carga de cada um, para escolher olhando o quanto já está cheio.
+        // No planejamento de domingo, começa no dia seguinte (a semana que vem).
+        const ag = tela.agendar;
+        const primeiro = tela.fluxo && tela.fluxo.tipo === 'planejamento' ? 1 : 0;
+        const dias = Array.from({ length: 7 }, (_, n) => somarDias(HOJE, primeiro + n));
+        const opcoes = dias.map((x) => {
+          const c = cargaDoDia(x);
+          const k = chave(x);
+          return `
+            <button class="btn dia-opcao ${c > LIMITE_DIA_PESADO ? 'pesado' : ''}" type="button" data-acao="agendar-dia" data-dia="${k}" aria-pressed="${ag.dia === k}">
+              <strong>${maiuscula(rotuloDia(x))}</strong><small>${c ? fmtDur(c) : 'livre'}${c > LIMITE_DIA_PESADO ? ' · pesado' : ''}</small>
+            </button>`;
+        }).join('');
+        const outraData = ag.dia && !dias.some((x) => chave(x) === ag.dia) ? ag.dia : '';
+        const pergunta = contexto === 'encaixar' ? 'Quando vou fazer?' : contexto === 'semhora' ? 'Que horas?' : 'Para quando?';
         return `
           <div class="painel">
-            <p>${contexto === 'encaixar' ? 'Quando vou fazer?' : 'Para quando?'}</p>
-            <div class="botoes">
-              <button class="btn" type="button" data-acao="mover" data-dias="0">Hoje</button>
-              <button class="btn" type="button" data-acao="mover" data-dias="1">Amanhã</button>
-              <button class="btn" type="button" data-acao="mover" data-dias="7">Daqui a 1 semana</button>
-              <label class="btn">Outra data <input type="date" data-acao="mover-data"></label>
+            <p>${pergunta}</p>
+            <div class="dias-opcoes">${opcoes}</div>
+            <label class="btn outra-data" aria-pressed="${Boolean(outraData)}">Outra data <input type="date" data-acao="agendar-outra" value="${outraData}"></label>
+            <div class="campo-linha">Hora
+              <input type="text" class="hora" id="agendar-hora" inputmode="numeric" maxlength="5" placeholder="hh:mm" value="${esc(ag.hora)}">
+              <span class="sub">(opcional)</span>
             </div>
+            <div class="botoes"><button class="btn principal" type="button" data-acao="agendar-confirmar">Confirmar</button></div>
             <div class="botoes gerenciar"><button class="link" type="button" data-acao="voltar">Cancelar</button></div>
           </div>`;
       }
@@ -1028,7 +1051,7 @@
             <button class="btn principal" type="button" data-acao="feito">Feito</button>
             ${item.minima ? '<button class="btn suave" type="button" data-acao="minima">Feito na versão mínima</button>' : ''}
             <button class="btn" type="button" data-acao="nao">Não fazer</button>
-            <button class="btn" type="button" data-acao="reagendar">${contexto === 'encaixar' ? 'Agendar' : 'Reagendar'}</button>
+            <button class="btn" type="button" data-acao="reagendar">${contexto === 'encaixar' ? 'Agendar' : contexto === 'semhora' ? 'Definir horário' : 'Reagendar'}</button>
           </div>
           ${gerenciar}
         </div>`;
@@ -1858,34 +1881,50 @@
             ? htmlCompiladoMetas(dias.filter(desdeOInicio))
             : '<p class="vazio">O app começou a ser usado depois desta semana.</p>'}</div></section>`;
       } else if (f.passo === 1) {
+        // Pendências: o que não tem dia (ou passou) e o que tem dia na próxima semana mas não tem hora.
         const resolver = paraResolver();
         const encaixar = aEncaixar().filter((i) => !estados[i.id]);
+        const semHora = [];
+        for (let n = 1; n <= 7; n++) {
+          const d = somarDias(HOJE, n);
+          for (const i of itensDoDia(d, false)) {
+            if (i.tipo === 'tarefa' && !i.regra && !i.hora && !estadoDe(i, d)) semHora.push(htmlItem(i, d, 'semhora'));
+          }
+        }
+        const nada = !resolver.length && !encaixar.length && !semHora.length;
         miolo = `
-          <h2>Prazos e tarefas a encaixar<small>Escolha um dia para cada tarefa que precisa acontecer nesta semana.</small></h2>
+          <h2>Pendências<small>Escolha dia e hora para o que precisa acontecer. Cada dia mostra quanto já está planejado.</small></h2>
           ${resolver.length ? secao('Para resolver', resolver.map((i) => htmlItem(i, null, 'resolver')), 'resolver') : ''}
-          ${secao('A encaixar', encaixar.map((i) => htmlItem(i, null, 'encaixar')), '', 'Nada a encaixar.')}`;
+          ${encaixar.length ? secao('A encaixar', encaixar.map((i) => htmlItem(i, null, 'encaixar'))) : ''}
+          ${semHora.length ? secao('Sem horário na próxima semana', semHora) : ''}
+          ${nada ? '<p class="vazio">Nada pendente. Tudo tem dia e hora.</p>' : ''}`;
       } else if (f.passo === 2) {
-        const maior = Math.max(LIMITE_DIA_PESADO + 60, ...Array.from({ length: 7 }, (_, n) => cargaDoDia(somarDias(HOJE, n + 1))));
-        const linhas = [];
-        const avisos = [];
+        // A próxima semana, dia a dia, com os avisos de cada dia e um atalho para adicionar.
+        let dias = '';
         for (let n = 1; n <= 7; n++) {
           const d = somarDias(HOJE, n);
           const c = cargaDoDia(d);
-          linhas.push(`
-            <div class="barra-dia ${c > LIMITE_DIA_PESADO ? 'pesada' : ''}">
-              <span>${fmtDiaCurto(d)}</span><span class="trilho"><i style="width:${(c / maior) * 100}%"></i></span><b>${fmtDur(c)}</b>
-            </div>`);
-          for (const [x, y] of sobreposicoes(d)) avisos.push(`${fmtDiaCurto(d)}: "${esc(x.i.titulo)}" se sobrepõe a "${esc(y.i.titulo)}".`);
+          const avisos = sobreposicoes(d).map(([x, y]) => `"${esc(x.i.titulo)}" (${textoIntervalo(x)}) se sobrepõe a "${esc(y.i.titulo)}" (${textoIntervalo(y)}).`);
           const viagem = itens.find((i) => i.area === 'trabalho' && i.tipo === 'compromisso' && (i.diaTodo || variosDias(i)) && ocorreEm(i, d));
           if (viagem) {
             const pessoais = itensDoDia(d, false).filter((i) => i.area === 'pessoal' && i.hora);
-            if (pessoais.length) avisos.push(`${fmtDiaCurto(d)}: "${esc(viagem.titulo)}" (Trabalho) no mesmo dia de ${pessoais.map((i) => `"${esc(i.titulo)}"`).join(', ')}.`);
+            if (pessoais.length) avisos.push(`"${esc(viagem.titulo)}" (Trabalho) no mesmo dia de ${pessoais.map((i) => `"${esc(i.titulo)}"`).join(', ')}.`);
           }
+          const doDia = itensDoDia(d, false);
+          dias += `
+            <div class="card dia-plano">
+              <div class="dia-plano-topo">
+                <strong>${maiuscula(DIAS[d.getDay()])}, ${d.getDate()}</strong>
+                <span class="${c > LIMITE_DIA_PESADO ? 'pesada' : ''}">${c ? fmtDur(c) : 'livre'}${c > LIMITE_DIA_PESADO ? ' · pesado' : ''}</span>
+              </div>
+              ${avisos.length ? `<div class="card aviso">${avisos.join('<br>')}</div>` : ''}
+              ${doDia.length ? `<ul class="itens">${doDia.map((i) => htmlItem(i, d, 'dia')).join('')}</ul>` : '<p class="vazio">Nada planejado.</p>'}
+              <div class="botoes"><button class="btn" type="button" data-acao="novo-no-dia" data-dia="${chave(d)}">+ Adicionar neste dia</button></div>
+            </div>`;
         }
         miolo = `
-          <h2>Carga dos próximos 7 dias<small>Acima de ${fmtDur(LIMITE_DIA_PESADO)} o dia aparece como pesado.</small></h2>
-          <div class="barras-dias">${linhas.join('')}</div>
-          ${avisos.length ? `<div class="card aviso">${avisos.join('<br>')}</div>` : '<p class="vazio" style="margin-top:12px">Nenhum conflito na semana.</p>'}`;
+          <h2>A próxima semana<small>Toque num item para editar ou reagendar. Acima de ${fmtDur(LIMITE_DIA_PESADO)}, o dia aparece como pesado.</small></h2>
+          ${dias}`;
       } else {
         miolo = `
           <h2>Plano de treino da semana<small>Cole aqui o plano feito fora do app. Ele aparece nos dias com treino.</small></h2>
@@ -1950,19 +1989,21 @@
       timerAviso = setTimeout(() => { el.hidden = true; }, 2800);
     }
 
-    function mover(item, d, nova) {
+    // Leva o item (ou só aquela ocorrência, se ele se repete) para outro dia e, se vier, outra hora.
+    function mover(item, d, nova, hora = '') {
       if (item.regra) {
         estados[chaveOcorrencia(item, d)] = { estado: 'reagendado', para: chave(nova) };
-        const { id, regra, ...resto } = item;
-        itens.push({ ...resto, id: novoId(), data: chave(nova) });
+        const { id, regra, excecoes, ...resto } = item;
+        itens.push({ ...resto, id: novoId(), data: chave(nova), ...(hora ? { hora } : {}) });
       } else {
-        item.reagendadoDe = item.data || null;
+        if (item.data !== chave(nova)) item.reagendadoDe = item.data || null;
         item.data = chave(nova);
+        if (hora) item.hora = hora;
         delete estados[item.id];
       }
       if (tela.fluxo && tela.fluxo.tipo === 'item') tela.fluxo = null;
       tela.aberto = null;
-      avisar(`Movido para ${rotuloDia(nova)}.`);
+      avisar(`Agendado para ${rotuloDia(nova)}${hora ? ' às ' + fmtHora(hora) : ''}.`);
     }
 
     function excluirItem(item) {
@@ -2066,6 +2107,7 @@
       'plano-editar': () => {
         tela.fluxo = { tipo: 'planejamento', passo: 3, dia: chave(HOJE) };
       },
+      'novo-no-dia': (b) => abrirForm(null, b.dataset.dia),
       'ajustes-abrir': () => { if (tela.aba !== 'ajustes') tela.abaAnterior = tela.aba; tela.aba = 'ajustes'; tela.aberto = null; window.scrollTo(0, 0); },
       'ajustes-voltar': () => { tela.aba = tela.abaAnterior || 'dia'; tela.modeloEditando = null; window.scrollTo(0, 0); },
       'modelo-novo': () => { tela.modeloEditando = { nome: '', tipo: 'compromisso', area: 'pessoal', titulo: '', dias: '', extras: [] }; },
@@ -2119,7 +2161,7 @@
       const alvo = ev.target.closest('[data-acao]');
       if (!alvo) return;
       const acao = alvo.dataset.acao;
-      if (acao === 'mover-data') return;
+      if (acao === 'agendar-outra') return; // deixa o seletor de data abrir
 
       if (acoesGerais[acao]) {
         acoesGerais[acao](alvo);
@@ -2156,7 +2198,21 @@
         case 'nao': tela.painel = 'nao'; tela.motivo = null; break;
         case 'motivo': tela.motivo = tela.motivo === alvo.dataset.valor ? null : alvo.dataset.valor; break;
         case 'planob': usarPlanoB(item, d); tela.aberto = null; tela.painel = 'acoes'; break;
-        case 'reagendar': tela.painel = 'reagendar'; break;
+        case 'reagendar':
+          tela.painel = 'reagendar';
+          // Já vem com o dia e a hora atuais do item, se houver.
+          tela.agendar = { dia: (!item.regra && item.data) || null, hora: item.hora || '' };
+          break;
+        case 'agendar-dia': tela.agendar.dia = alvo.dataset.dia; break;
+        case 'agendar-confirmar': {
+          if (!tela.agendar.dia) { avisar('Escolha o dia.'); return; }
+          const texto = tela.agendar.hora.trim();
+          const hora = texto ? normalizarHora(texto) : '';
+          if (hora === null) { avisar('Hora inválida. Digite assim: 14:30 (ou só 1430).'); return; }
+          mover(item, d, deChave(tela.agendar.dia), hora);
+          tela.painel = 'acoes';
+          break;
+        }
         case 'voltar': tela.painel = 'acoes'; break;
         case 'falha': estados[k] = { estado: 'nao', conta: 'falha', motivo: tela.motivo }; tela.aberto = null; tela.painel = 'acoes'; break;
         case 'neutro': estados[k] = { estado: 'nao', conta: 'neutro', motivo: tela.motivo }; tela.aberto = null; tela.painel = 'acoes'; break;
@@ -2185,7 +2241,6 @@
           fecharDepoisDeExcluir();
           avisar('Item excluído.');
           break;
-        case 'mover': mover(item, d, somarDias(HOJE, Number(alvo.dataset.dias))); tela.painel = 'acoes'; break;
         case 'etapa': {
           const etapa = item.etapas[Number(alvo.dataset.etapa)];
           etapa.feita = !etapa.feita;
@@ -2201,13 +2256,10 @@
       render();
     });
 
+    // "Outra data" no agendar: escolhe o dia, e a confirmação continua pelo botão.
     document.addEventListener('change', (ev) => {
-      if (ev.target.dataset.acao !== 'mover-data' || !ev.target.value) return;
-      const li = ev.target.closest('.item');
-      const item = itens.find((i) => i.id === li.dataset.id);
-      const d = li.dataset.dia ? deChave(li.dataset.dia) : null;
-      mover(item, d, deChave(ev.target.value));
-      tela.painel = 'acoes';
+      if (ev.target.dataset.acao !== 'agendar-outra' || !ev.target.value) return;
+      tela.agendar.dia = ev.target.value;
       render();
     });
 
@@ -2216,6 +2268,11 @@
       if (ev.target.id === 'nota-dia') tela.rascunho.texto = ev.target.value;
       if (ev.target.id === 'plano-treino') { planoTreino = ev.target.value; salvar(); }
       if (ev.target.id === 'meta-titulo') tela.novaMeta.titulo = ev.target.value;
+      if (ev.target.id === 'agendar-hora') {
+        const d = ev.target.value.replace(/\D/g, '').slice(0, 4);
+        ev.target.value = d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d;
+        tela.agendar.hora = ev.target.value;
+      }
       // Editor de modelos: guarda o que é digitado sem redesenhar a tela.
       if (tela.modeloEditando && ev.target.dataset.m) tela.modeloEditando[ev.target.dataset.m] = ev.target.value;
       if (tela.modeloEditando && ev.target.dataset.x) {
@@ -2316,15 +2373,17 @@
     }
 
     // Sem item: cadastro novo. Com item: edição, com o formulário já preenchido.
-    function abrirForm(item = null) {
+    function abrirForm(item = null, dia = null) {
       form.tipo = 'tarefa';
       form.area = 'pessoal';
-      form.dias = new Set([HOJE.getDay()]);
+      form.dias = new Set([(dia ? deChave(dia) : HOJE).getDay()]);
       form.modelo = null;
       form.detalhes = false;
       form.editando = item ? item.id : null;
+      form.diasManual = Boolean(item?.regra?.semanal); // na edição, mantém os dias já escolhidos
       $('form-novo').reset();
-      $('f-data').value = chave(HOJE);
+      $('f-data').value = dia || chave(HOJE);
+      if (dia) $('f-quando-data').value = dia; // "+ Adicionar neste dia" no planejamento
       $('f-erro').hidden = true;
       $('f-cabecalho').textContent = item ? 'Editar item' : 'Novo item';
 
@@ -2409,10 +2468,15 @@
       if (d) {
         const i = Number(d.dataset.fDia);
         if (form.dias.has(i)) form.dias.delete(i); else form.dias.add(i);
+        form.diasManual = true;
       }
       if (md || t || a || d) renderForm();
     });
     $('form-novo').addEventListener('change', (ev) => {
+      // Os dias da semana da repetição acompanham a data escolhida, até serem mudados à mão.
+      if ((ev.target.id === 'f-data' || ev.target.id === 'f-quando-data') && ev.target.value && !form.diasManual) {
+        form.dias = new Set([deChave(ev.target.value).getDay()]);
+      }
       if (ev.target.id === 'f-data' && modeloDoForm()?.dias) {
         $('f-ate').value = chave(somarDias(deChave(ev.target.value), modeloDoForm().dias - 1));
       }
