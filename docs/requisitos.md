@@ -1,6 +1,6 @@
 # Requisitos do app de hábitos e tarefas
 
-**Versão 2 — rascunho para revisão · 4 de outubro de 2026**
+**Versão 3 — rascunho para revisão · 4 de outubro de 2026**
 
 > Documento vivo. Registra o que já foi decidido, o que é proposta e o que ainda está em aberto.
 > **[proposta]** = sugestão ainda não confirmada · **[em aberto]** = precisa de decisão.
@@ -114,8 +114,43 @@ Uma tarefa agendada que não foi feita no dia planejado fica pendente, de forma 
 - **Lembrete por item**, configurado no cadastro de cada tarefa.
 - **Resumo do dia seguinte, todo dia às 20h**, com o que está agendado para amanhã.
 
-### 4.9 Registro opcional de energia e observações **[em aberto, versão futura]**
-Um registro diário de 1 ou 2 toques (energia de 1 a 5 e uma nota livre), para depois enxergar padrões. Ainda sem decisão sobre o que se quer observar.
+### 4.9 Fechamento do dia e registro de energia
+O dia é fechado à noite, em dois passos:
+1. **O que ficou em aberto:** o app lista os itens do dia sem decisão, e cada um recebe feito, não fazer ou reagendar. Nenhum dia termina com coisa em aberto.
+2. **Como foi o dia:** energia de 1 a 5 (um toque) e uma frase livre, opcional.
+
+O registro aparece no calendário (no dia escolhido) e no histórico (diário e gráfico de energia).
+
+### 4.10 Visão do dia
+- **Agora:** o que está acontecendo, até que horas, o que vem a seguir e em quanto tempo.
+- **Linha do tempo:** os itens desenhados nas horas do dia, mostrando os espaços livres. Itens que se sobrepõem ficam destacados, com um aviso. Também há o modo lista.
+- **Duração e carga do dia:** cada item tem uma duração estimada (com um padrão por tipo). O dia mostra o total planejado e aparece como "pesado" acima de 6 horas.
+
+### 4.11 Etapas e rotinas
+- **Etapas dentro de uma tarefa:** uma tarefa pode ser dividida em etapas, e o app destaca a próxima. Quando todas são marcadas, a tarefa é concluída.
+- **Rotina da manhã passo a passo:** os itens do dia antes das 9h formam uma sequência, feita um passo de cada vez (feito, versão mínima, não fazer ou pular por agora).
+
+### 4.12 Versão mínima e plano B
+- **Versão mínima:** um hábito, treino ou estudo pode ter uma versão para dia ruim (ex.: "10 minutos de leitura"). Ela conta como feita, mas aparece separada no histórico.
+- **Plano B:** um item pode ter uma alternativa definida (ex.: "estudo curto na segunda"). Ao marcar "não fazer", o app oferece criar o plano B.
+- **Motivo do "não fiz":** opcional, com opções rápidas (cansaço, imprevisto, trabalho, saúde, esqueci, outro).
+
+### 4.13 Modelos
+Modelos criam um item já preenchido e os itens que costumam vir junto:
+- **Viagem de trabalho:** compromisso de vários dias, mais "Fazer a mala" na véspera (com a lista da mala) e "Reembolso" com prazo de 5 dias depois da volta.
+- **Consulta:** compromisso, mais "Separar documentos e exames" na véspera.
+
+### 4.14 Planejamento da semana (domingo)
+Uma tela guiada para os 15 minutos de domingo:
+1. Como foi a semana: percentual concluído, versão mínima, falhas, energia média e números por hábito.
+2. Prazos e tarefas a encaixar, com o botão de agendar.
+3. Carga dos próximos 7 dias, dias pesados, sobreposições e conflitos com Trabalho.
+4. Plano de treino da semana (texto).
+
+### 4.15 Detalhes, histórico e busca
+- **Detalhes no item:** onde, o que levar e observações.
+- **Histórico:** consistência de cada hábito nas últimas 8 semanas, energia dos últimos 14 dias, motivos de "não fiz" nos últimos 30 dias e diário.
+- **Busca** em itens, notas, etapas e diário.
 
 ## 5. Visual
 
@@ -156,7 +191,7 @@ Exemplo de repetição com horário fixo: sobrancelha, todo sábado às 15h.
 1. **Opções de lembrete:** na hora, alguns minutos antes, um dia antes? Pode haver mais de um lembrete por item?
 2. **Treino e estudo:** ficam como tipos dentro da área Pessoal? **[proposta: sim]**
 3. **Estudo:** como representar sessões fixas, lista de leituras e as regras de reserva e versão mínima.
-4. **Registro de energia:** vale entrar? Que padrões se quer enxergar?
+4. **Registro de energia:** decidido que entra (ver 4.9). Que padrões se quer enxergar além do gráfico de energia?
 5. **Sábado:** a musculação B (~14h) e a sobrancelha (15h) podem se sobrepor; confirmar os horários reais.
 6. **Nomes dos campos:** "Prazo" e "Quando vou fazer" ficam bons ou existem nomes que façam mais sentido?
 
@@ -173,3 +208,5 @@ Exemplo de repetição com horário fixo: sobrancelha, todo sábado às 15h.
 | 6 | Exportar dados e ajustes finais |
 
 Cada fase já deve ser usável sozinha, para ajustar o rumo com base no uso real.
+
+**[em aberto]** As funcionalidades de 4.9 a 4.15, testadas na prévia (`web/previa/`), ainda precisam ser distribuídas nas fases.
