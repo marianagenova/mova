@@ -1427,6 +1427,16 @@
       // No celular, as colunas ficam uma embaixo da outra, na mesma ordem.
       html += '<div class="colunas"><div class="col">';
       if (ehHoje) html += htmlAgora();
+      // Dia que já passou: dá para fechar depois (ou rever o fechamento).
+      if (d < HOJE) {
+        const fechado = Boolean(estados['fechamento|' + tela.dia]);
+        html += `
+          <div class="card">
+            <h3>Fechar o dia</h3>
+            <p class="sub">${fechado ? 'Dia fechado ✓' : 'Este dia ainda não foi fechado.'}</p>
+            <div class="botoes"><button class="btn ${fechado ? '' : 'principal'}" type="button" data-acao="fluxo-abrir" data-fluxo="fechamento" data-dia="${tela.dia}">${fechado ? 'Rever o fechamento' : 'Fechar este dia'}</button></div>
+          </div>`;
+      }
 
       html += `<div class="card"><h3>Metas do dia</h3>${htmlMetasDoDia(d)}</div>`;
 
@@ -2190,7 +2200,7 @@
       if (f.passo === 0) {
         const abertos = itensDoDia(d, false).filter((i) => !estadoDe(i, d) && !i.diaTodo && !variosDias(i));
         miolo = `
-          <h2>Itens de hoje sem marcação<small>Se você marcou tudo durante o dia, esta lista fica vazia. Para cada item que sobrou: feito, não fiz ou reagendar.</small></h2>
+          <h2>Itens ${d.getTime() === HOJE.getTime() ? 'de hoje' : 'do dia'} sem marcação<small>Se você marcou tudo durante o dia, esta lista fica vazia. Para cada item que sobrou: feito, não fiz ou reagendar.</small></h2>
           ${abertos.length ? `<ul class="itens">${abertos.map((i) => htmlItem(i, d, 'dia')).join('')}</ul>`
             : '<p class="vazio">Tudo marcado. Pode seguir para o próximo passo.</p>'}`;
       } else if (f.passo === 1) {
@@ -2471,10 +2481,10 @@
       'ver-mes-hist': () => { tela.aba = 'historico'; tela.mesHist = new Date(tela.mes); window.scrollTo(0, 0); },
       'fluxo-abrir': (b) => {
         const tipo = b.dataset.fluxo;
-        tela.fluxo = { tipo, passo: 0, dia: chave(HOJE) };
+        tela.fluxo = { tipo, passo: 0, dia: b.dataset.dia || chave(HOJE) };
         tela.aberto = null;
         tela.painel = 'acoes';
-        const r = registros[chave(HOJE)];
+        const r = registros[tela.fluxo.dia];
         tela.rascunho = { energia: r ? r.energia : null, texto: r ? r.texto : '' };
       },
       'fluxo-fechar': () => { tela.fluxo = null; tela.aberto = null; },
@@ -2491,8 +2501,8 @@
       'energia': (b) => { tela.rascunho.energia = Number(b.dataset.valor); },
       'fechamento-salvar': () => {
         if (!tela.rascunho.energia) { avisar('Escolha a energia do dia (1 a 5).'); return; }
-        registros[chave(HOJE)] = { energia: tela.rascunho.energia, texto: tela.rascunho.texto.trim() };
-        estados['fechamento|' + chave(HOJE)] = { estado: 'feito' };
+        registros[tela.fluxo.dia] = { energia: tela.rascunho.energia, texto: tela.rascunho.texto.trim() };
+        estados['fechamento|' + tela.fluxo.dia] = { estado: 'feito' };
         tela.fluxo = null;
         avisar('Dia fechado. O registro aparece no calendário e no histórico.');
       },
