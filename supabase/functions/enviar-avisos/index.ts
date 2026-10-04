@@ -105,7 +105,7 @@ function avisosDeAgora(dados: Dados, hoje: string, agora: number): Aviso[] {
       if (estadoDe(dados, item, dia)) continue; // já marcado (feito, não fazer ou reagendado)
       const alvo = minutos(item.hora) - antes + deslocamento;
       if (agora < alvo || agora >= alvo + TOLERANCIA) continue;
-      const partes = [antes ? `${item.titulo} às ${fmtHora(item.hora)} (${quandoAntes(antes)})` : `${item.titulo} agora (${fmtHora(item.hora)})`];
+      const partes = [`${item.titulo} às ${fmtHora(item.hora)}${antes ? ` (${quandoAntes(antes)})` : ''}`];
       if (item.tipo === 'estudo' && estudo) partes.push(estudo);
       if (item.local) partes.push(item.local);
       avisos.push({ chave: `${item.id}|${dia}|${antes}`, titulo: 'Mova', texto: partes.join(' · ') });
