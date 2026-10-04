@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mova · prévia</title>
+  <meta name="theme-color" content="#2e7d6b">
+  <link rel="icon" href="../icons/icon-192.png" type="image/png">
+  <style>
+    :root {
+      --pessoal: #2e7d6b;
+      --pessoal-claro: #e2f1ec;
+      --trabalho: #4f5bd5;
+      --trabalho-claro: #e8eafb;
+      --vencido: #c0392b;
+      --vencido-claro: #fbe9e7;
+      --aviso: #8a5a00;
+      --aviso-claro: #fff4d6;
+      --ink: #1f2933;
+      --muted: #6b7280;
+      --line: #e7e5e4;
+      --bg: #f6f5f2;
+      --card: #ffffff;
+      --nivel-1: #d5ebe4;
+      --nivel-2: #8cc7b5;
+      --nivel-3: #2e7d6b;
+      color-scheme: light;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    }
+
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    svg.icone { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+    .wrap { max-width: 520px; margin: 0 auto; padding-inline: 16px; }
+
+    .faixa-previa {
+      background: var(--aviso-claro);
+      color: var(--aviso);
+      font-size: 0.8125rem;
+      text-align: center;
+      padding: 8px 16px;
+      padding-top: calc(8px + env(safe-area-inset-top, 0px));
+    }
+
+    header.topo {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+      padding-block: 12px 10px;
+    }
+    .topo h1 { margin: 0; font-size: 1.5rem; color: var(--pessoal); }
+    .topo .data-hoje { margin: 2px 0 10px; color: var(--muted); font-size: 0.9375rem; }
+
+    .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+    .chips + .chips { margin-top: 6px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid var(--line); background: var(--card);
+      border-radius: 999px; padding: 6px 12px; white-space: nowrap; font-size: 0.875rem;
+    }
+    .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .chip .ponto { width: 10px; height: 10px; border-radius: 50%; }
+    .chip svg.icone { width: 15px; height: 15px; }
+
+    main { padding-block: 8px 24px; }
+
+    .secao h2 {
+      font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--muted); margin: 20px 0 8px; font-weight: 700;
+    }
+    .secao.resolver h2 { color: var(--vencido); }
+    .vazio { color: var(--muted); font-size: 0.875rem; margin: 0 0 4px; padding-left: 4px; }
+
+    ul.itens { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+
+    .item {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--cor);
+      border-radius: 12px;
+    }
+    .item.area-pessoal { --cor: var(--pessoal); --cor-clara: var(--pessoal-claro); }
+    .item.area-trabalho { --cor: var(--trabalho); --cor-clara: var(--trabalho-claro); }
+
+    .linha { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 10px; }
+    .check {
+      width: 28px; height: 28px; border-radius: 50%; flex: none;
+      border: 2px solid var(--cor); background: transparent; padding: 0;
+      display: grid; place-items: center; color: #fff;
+    }
+    .check svg { width: 16px; height: 16px; stroke-width: 3; visibility: hidden; }
+    .is-feito .check { background: var(--cor); }
+    .is-feito .check svg { visibility: visible; }
+
+    .corpo { flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: left; }
+    .titulo { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+    .titulo svg { color: var(--cor); }
+    .titulo span { overflow-wrap: anywhere; }
+    .meta { color: var(--muted); font-size: 0.8125rem; margin-top: 2px; }
+    .meta .vencido { color: var(--vencido); font-weight: 700; }
+    .meta .hoje { color: var(--aviso); font-weight: 700; }
+    .meta .estado { color: var(--ink); font-weight: 600; }
+
+    .is-feito .titulo span, .is-nao .titulo span, .is-reag .titulo span { text-decoration: line-through; color: var(--muted); }
+    .item.vencido { border-color: #efc2bc; border-left-color: var(--vencido); background: #fffafa; }
+
+    .painel { border-top: 1px solid var(--line); padding: 10px 12px 12px; display: grid; gap: 8px; }
+    .painel p { margin: 0; font-size: 0.875rem; color: var(--muted); }
+    .botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+    .btn {
+      border: 1px solid var(--line); background: var(--card); border-radius: 10px;
+      padding: 8px 12px; font-size: 0.875rem; font-weight: 600;
+    }
+    .btn.principal { background: var(--cor, var(--pessoal)); border-color: var(--cor, var(--pessoal)); color: #fff; }
+    .btn.falha { color: var(--vencido); border-color: #efc2bc; }
+    .btn label, label.btn { display: inline-flex; align-items: center; gap: 6px; }
+    label.btn input { border: 0; padding: 0; background: none; font-size: 0.875rem; }
+
+    /* Calendário */
+    .mes-topo { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px; }
+    .mes-topo h2 { margin: 0; font-size: 1.125rem; }
+    .mes-topo .btn { padding: 6px 12px; }
+    .grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .grade .sem { text-align: center; font-size: 0.75rem; color: var(--muted); font-weight: 700; padding-bottom: 2px; }
+    .dia {
+      aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--line); background: var(--card);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+      padding: 0; font-size: 0.875rem; position: relative;
+    }
+    .dia.n1 { background: var(--nivel-1); border-color: var(--nivel-1); }
+    .dia.n2 { background: var(--nivel-2); border-color: var(--nivel-2); }
+    .dia.n3 { background: var(--nivel-3); border-color: var(--nivel-3); color: #fff; }
+    .dia.hoje { border: 2px solid var(--ink); font-weight: 700; }
+    .dia.sel { outline: 3px solid var(--trabalho); outline-offset: 1px; }
+    .dia .pontos { display: flex; gap: 3px; height: 6px; }
+    .dia .pontos i { width: 6px; height: 6px; border-radius: 50%; }
+    .dia .faixa-trab { position: absolute; left: 4px; right: 4px; bottom: 4px; height: 4px; border-radius: 2px; background: var(--trabalho); }
+    .legenda { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.75rem; color: var(--muted); margin-top: 8px; }
+    .legenda span { display: inline-flex; align-items: center; gap: 4px; }
+    .legenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+    .resumo { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+    .resumo .total { font-size: 0.9375rem; }
+    .resumo .total strong { font-size: 1.5rem; color: var(--pessoal); margin-right: 4px; }
+    .barra-linha { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 0.875rem; }
+    .barra { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+    .barra i { display: block; height: 100%; background: var(--pessoal); }
+
+    /* Navegação */
+    nav.abas {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+      background: var(--card); border-top: 1px solid var(--line);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    nav.abas .wrap { display: flex; }
+    .aba {
+      flex: 1; background: none; border: 0; padding: 10px 4px 12px;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      font-size: 0.75rem; color: var(--muted); position: relative;
+    }
+    .aba svg.icone { width: 22px; height: 22px; }
+    .aba[aria-current="page"] { color: var(--pessoal); font-weight: 700; }
+    .aba .badge {
+      position: absolute; top: 4px; left: calc(50% + 6px);
+      background: var(--vencido); color: #fff; font-size: 0.6875rem; font-weight: 700;
+      border-radius: 999px; padding: 0 6px; line-height: 16px;
+    }
+    .fab {
+      position: fixed; z-index: 11; right: max(16px, calc(50% - 260px + 16px));
+      bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+      width: 56px; height: 56px; border-radius: 50%; border: 0;
+      background: var(--pessoal); color: #fff; display: grid; place-items: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    }
+    .fab svg.icone { width: 28px; height: 28px; stroke-width: 2.5; }
+
+    .aviso-salvo {
+      position: fixed; z-index: 12; left: 50%; transform: translateX(-50%);
+      bottom: calc(144px + env(safe-area-inset-bottom, 0px));
+      background: var(--ink); color: #fff; border-radius: 10px; padding: 10px 14px; font-size: 0.875rem;
+      max-width: calc(100% - 32px);
+    }
+
+    /* Cadastro rápido */
+    .fundo { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.35); display: flex; align-items: flex-end; justify-content: center; }
+    .folha {
+      background: var(--card); width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto;
+      border-radius: 18px 18px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+    .folha h2 { margin: 0 0 12px; font-size: 1.125rem; }
+    .folha .titulo-input {
+      width: 100%; font-size: 1.125rem; padding: 12px; border: 1px solid var(--line); border-radius: 10px;
+    }
+    .campo { margin-top: 14px; display: grid; gap: 6px; }
+    .campo > .rotulo { font-size: 0.8125rem; font-weight: 700; color: var(--muted); }
+    .campo .dica { font-size: 0.8125rem; color: var(--muted); margin: 0; }
+    .campo-linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .campo input[type="date"], .campo input[type="time"], .campo input[type="number"], .campo select {
+      padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+    }
+    .campo input[type="number"] { width: 72px; }
+    .opcao[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .msg { margin: 14px 0 0; border-radius: 10px; padding: 10px 12px; font-size: 0.875rem; }
+    .msg.conflito { background: var(--aviso-claro); color: var(--aviso); }
+    .msg.erro { background: var(--vencido-claro); color: var(--vencido); }
+    .folha .rodape { display: flex; gap: 8px; margin-top: 18px; }
+    .folha .rodape .btn { flex: 1; padding: 12px; font-size: 1rem; }
+    .folha .rodape .btn.principal { --cor: var(--pessoal); }
+  </style>
+</head>
+<body>
+  <div class="faixa-previa">Prévia com dados de exemplo. Nada fica salvo: recarregar a página volta ao início.</div>
+
+  <header class="topo">
+    <div class="wrap">
+      <h1>Mova</h1>
+      <p class="data-hoje" id="data-hoje"></p>
+      <div class="chips" id="filtro-area"></div>
+      <div class="chips" id="filtro-tipo"></div>
+    </div>
+  </header>
+
+  <main class="wrap" id="conteudo"></main>
+
+  <button class="fab" id="btn-novo" type="button" aria-label="Novo item">
+    <svg class="icone" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <nav class="abas">
+    <div class="wrap">
+      <button class="aba" type="button" data-aba="lista">
+        <svg class="icone" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>
+        Lista
+      </button>
+      <button class="aba" type="button" data-aba="encaixar">
+        <svg class="icone" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+        A encaixar
+        <span class="badge" id="badge-encaixar"></span>
+      </button>
+      <button class="aba" type="button" data-aba="calendario">
+        <svg class="icone" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+        Calendário
+      </button>
+    </div>
+  </nav>
+
+  <div class="aviso-salvo" id="aviso-salvo" hidden></div>
+
+  <div class="fundo" id="fundo-novo" hidden>
+    <form class="folha" id="form-novo" novalidate>
+      <h2>Novo item</h2>
+      <input class="titulo-input" id="f-titulo" placeholder="O que precisa ser feito?" autocomplete="off">
+
+      <div class="campo">
+        <span class="rotulo">Tipo</span>
+        <div class="chips" id="f-tipo"></div>
+      </div>
+
+      <div class="campo">
+        <span class="rotulo">Área</span>
+        <div class="chips" id="f-area"></div>
+      </div>
+
+      <div id="f-bloco-tarefa">
+        <div class="campo">
+          <span class="rotulo">Quando vou fazer (opcional)</span>
+          <div class="campo-linha">
+            <input type="date" id="f-quando-data">
+            <input type="time" id="f-quando-hora">
+          </div>
+        </div>
+        <div class="campo">
+          <span class="rotulo">Prazo (opcional)</span>
+          <div class="campo-linha"><input type="date" id="f-prazo"></div>
+          <p class="dica">Sem nenhum dos dois, a tarefa vai para "A encaixar".</p>
+        </div>
+      </div>
+
+      <div id="f-bloco-agenda" hidden>
+        <div class="campo">
+          <span class="rotulo" id="f-rotulo-data">Data e hora</span>
+          <div class="campo-linha">
+            <input type="date" id="f-data">
+            <input type="time" id="f-hora">
+            <label class="chip" id="f-dia-todo-rotulo"><input type="checkbox" id="f-dia-todo"> Dia todo</label>
+          </div>
+        </div>
+        <div class="campo" id="f-campo-ate">
+          <span class="rotulo">Até (opcional, para vários dias)</span>
+          <div class="campo-linha"><input type="date" id="f-ate"></div>
+        </div>
+        <div class="campo">
+          <span class="rotulo">Repetição</span>
+          <div class="campo-linha">
+            <select id="f-repeticao">
+              <option value="nao">Não repete</option>
+              <option value="todo">Todo dia</option>
+              <option value="uteis">Dias úteis</option>
+              <option value="dias">Dias específicos da semana</option>
+              <option value="intervalo">A cada N dias ou semanas</option>
+              <option value="mensal">Uma vez por mês</option>
+            </select>
+          </div>
+          <div class="chips" id="f-dias-semana" hidden></div>
+          <div class="campo-linha" id="f-intervalo" hidden>
+            A cada <input type="number" id="f-intervalo-n" min="1" value="15">
+            <select id="f-intervalo-unidade">
+              <option value="dia">dias</option>
+              <option value="semana">semanas</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="campo">
+        <span class="rotulo">Lembrete</span>
+        <div class="campo-linha">
+          <select id="f-lembrete">
+            <option>Na hora</option>
+            <option>10 minutos antes</option>
+            <option>1 hora antes</option>
+            <option>1 dia antes</option>
+            <option>Sem lembrete</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="msg conflito" id="f-conflito" hidden></p>
+      <p class="msg erro" id="f-erro" hidden></p>
+
+      <div class="rodape">
+        <button class="btn" type="button" id="f-cancelar">Cancelar</button>
+        <button class="btn principal" type="submit">Salvar</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // ---------- Datas ----------
+    const DIAS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+    const DIAS_CURTOS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+    function inicioDoDia(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+    function somarDias(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+    function diferencaDias(a, b) { return Math.round((inicioDoDia(b) - inicioDoDia(a)) / 86400000); }
+    function chave(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+    function deChave(k) { const [a, m, d] = k.split('-').map(Number); return new Date(a, m - 1, d); }
+    function maiuscula(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+    function fmtHora(h) { const [H, M] = h.split(':').map(Number); return M ? `${H}h${String(M).padStart(2, '0')}` : `${H}h`; }
+    function fmtDiaCurto(d) { return `${DIAS_CURTOS[d.getDay()]}, ${d.getDate()}`; }
+    function rotuloDia(d) {
+      const n = diferencaDias(HOJE, d);
+      if (n === 0) return 'hoje';
+      if (n === 1) return 'amanhã';
+      if (n === -1) return 'ontem';
+      return fmtDiaCurto(d);
+    }
+
+    const HOJE = inicioDoDia(new Date());
+    const em = (n) => chave(somarDias(HOJE, n));
+
+    // ---------- Tipos e áreas ----------
+    const ICONES = {
+      tarefa: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8.5 12.5l2.5 2.5 4.5-5.5"/>',
+      habito: '<path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/>',
+      compromisso: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+      treino: '<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>',
+      estudo: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/>',
+      check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+    };
+    const TIPOS = {
+      tarefa: 'Tarefa', habito: 'Hábito', compromisso: 'Compromisso', treino: 'Treino', estudo: 'Estudo',
+    };
+    const AREAS = { pessoal: 'Pessoal', trabalho: 'Trabalho' };
+    const icone = (nome) => `<svg class="icone" viewBox="0 0 24 24" aria-hidden="true">${ICONES[nome]}</svg>`;
+
+    // ---------- Dados de exemplo (rotina do documento de requisitos) ----------
+    let proximoId = 1;
+    const novoId = () => `i${proximoId++}`;
+    const desde = em(-120);
+
+    const itens = [
+      { titulo: 'Ligação', tipo: 'habito', area: 'pessoal', hora: '05:50', regra: { semanal: [1, 2, 3, 4, 5], inicio: desde } },
+      { titulo: 'Natação · técnica', tipo: 'treino', area: 'pessoal', hora: '06:15', regra: { semanal: [1], inicio: desde } },
+      { titulo: 'Natação · contínua, leve', tipo: 'treino', area: 'pessoal', hora: '06:15', regra: { semanal: [5], inicio: desde } },
+      { titulo: 'Estudo', tipo: 'estudo', area: 'pessoal', hora: '06:10', fim: '06:40', regra: { semanal: [2, 4], inicio: desde } },
+      { titulo: 'Pilates (+ cardio leve opcional)', tipo: 'treino', area: 'pessoal', hora: '07:00', regra: { semanal: [2, 4], inicio: desde } },
+      { titulo: 'Musculação A', tipo: 'treino', area: 'pessoal', hora: '07:20', regra: { semanal: [3], inicio: desde } },
+      { titulo: 'Musculação B', tipo: 'treino', area: 'pessoal', hora: '14:00', regra: { semanal: [6], inicio: desde } },
+      { titulo: 'Sobrancelha', tipo: 'habito', area: 'pessoal', hora: '15:00', regra: { semanal: [6], inicio: desde } },
+      { titulo: 'Estudo mais longo (opcional)', tipo: 'estudo', area: 'pessoal', hora: '09:00', regra: { semanal: [0], inicio: desde } },
+      { titulo: 'Planejamento da semana · 15 min', tipo: 'habito', area: 'pessoal', hora: '19:30', regra: { semanal: [0], inicio: desde } },
+
+      { titulo: 'Pagar IPVA', tipo: 'tarefa', area: 'pessoal', prazo: em(-2) },
+      { titulo: 'Levar o casaco na costureira', tipo: 'tarefa', area: 'pessoal', data: em(-1), hora: '10:00' },
+      { titulo: 'Comprar presente da Ana', tipo: 'tarefa', area: 'pessoal', data: em(1), hora: '12:30', prazo: em(6) },
+      { titulo: 'Reunião com a diretoria (fora do horário)', tipo: 'compromisso', area: 'trabalho', data: em(2), hora: '19:00' },
+      { titulo: 'Consulta na dermatologista', tipo: 'compromisso', area: 'pessoal', data: em(3), hora: '16:30' },
+      { titulo: 'Viagem a Brasília', tipo: 'compromisso', area: 'trabalho', data: em(4), ate: em(5), diaTodo: true },
+
+      { titulo: 'Enviar documentos do condomínio', tipo: 'tarefa', area: 'pessoal', prazo: em(3) },
+      { titulo: 'Reembolso da viagem', tipo: 'tarefa', area: 'trabalho', prazo: em(12) },
+      { titulo: 'Marcar dentista', tipo: 'tarefa', area: 'pessoal' },
+      { titulo: 'Trocar a lâmpada do banheiro', tipo: 'tarefa', area: 'pessoal' },
+    ].map((item) => ({ id: novoId(), ...item }));
+
+    // Estado de cada ocorrência: { estado: 'feito' | 'nao' | 'reagendado', conta, para }
+    const estados = {};
+
+    function ocorreEm(item, d) {
+      if (item.regra) {
+        const r = item.regra;
+        if (r.inicio && d < deChave(r.inicio)) return false;
+        if (r.semanal) return r.semanal.includes(d.getDay());
+        if (r.intervalo) {
+          const passo = r.intervalo * (r.unidade === 'semana' ? 7 : 1);
+          const n = diferencaDias(deChave(r.inicio), d);
+          return n >= 0 && n % passo === 0;
+        }
+        if (r.mensal) return d.getDate() === r.mensal;
+        return false;
+      }
+      if (!item.data) return false;
+      const ini = deChave(item.data);
+      const fim = item.ate ? deChave(item.ate) : ini;
+      return d >= ini && d <= fim;
+    }
+
+    function chaveOcorrencia(item, d) { return item.regra ? `${item.id}|${chave(d)}` : item.id; }
+
+    function sorteio(texto) {
+      let h = 2166136261;
+      for (let i = 0; i < texto.length; i++) { h ^= texto.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return ((h >>> 0) % 1000) / 1000;
+    }
+
+    // Histórico inventado para os dias que já passaram.
+    function estadoDe(item, d) {
+      const k = chaveOcorrencia(item, d);
+      if (estados[k]) return estados[k];
+      if (item.regra && d && d < HOJE) {
+        const s = sorteio(k);
+        const chanceFeito = item.titulo.includes('opcional') ? 0.5 : 0.8;
+        if (s < chanceFeito) return { estado: 'feito' };
+        if (s < chanceFeito + (1 - chanceFeito) / 2) return { estado: 'nao', conta: 'falha' };
+        return { estado: 'nao', conta: 'neutro' };
+      }
+      return null;
+    }
+
+    function textoRegra(r) {
+      if (r.semanal) {
+        const s = r.semanal;
+        if (s.length === 7) return 'Todo dia';
+        if (s.join() === '1,2,3,4,5') return 'Dias úteis';
+        if (s.length === 1) return `${s[0] === 0 || s[0] === 6 ? 'Todo' : 'Toda'} ${DIAS[s[0]]}`;
+        const nomes = s.map((i) => (s.length <= 3 ? DIAS : DIAS_CURTOS)[i]);
+        return maiuscula(nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1]);
+      }
+      if (r.intervalo) {
+        const unidade = r.unidade === 'semana' ? (r.intervalo > 1 ? 'semanas' : 'semana') : (r.intervalo > 1 ? 'dias' : 'dia');
+        return `A cada ${r.intervalo} ${unidade}`;
+      }
+      if (r.mensal) return `Todo dia ${r.mensal}`;
+      return '';
+    }
+
+    function textoPrazo(item) {
+      const n = diferencaDias(HOJE, deChave(item.prazo));
+      if (n < 0) return `<span class="vencido">venceu há ${-n} ${n === -1 ? 'dia' : 'dias'}</span>`;
+      if (n === 0) return '<span class="hoje">vence hoje</span>';
+      if (n === 1) return '<span class="hoje">vence amanhã</span>';
+      return `vence em ${n} dias`;
+    }
+
+    function textoEstado(e) {
+      if (!e) return '';
+      if (e.estado === 'feito') return 'Feito';
+      if (e.estado === 'nao') return e.conta === 'falha' ? 'Não fez · conta como falha' : 'Não fez · neutro';
+      if (e.estado === 'reagendado') return `Reagendado para ${rotuloDia(deChave(e.para))}`;
+      return '';
+    }
+
+    function ordenar(a, b) {
+      if (a.diaTodo !== b.diaTodo) return a.diaTodo ? -1 : 1;
+      return (a.hora || '99').localeCompare(b.hora || '99');
+    }
+
+    // ---------- Estado da tela ----------
+    const tela = {
+      aba: 'lista',
+      area: 'todas',
+      tipos: new Set(),
+      aberto: null,       // "id|dia" do item com o painel aberto
+      painel: 'acoes',    // 'acoes' | 'nao' | 'reagendar'
+      mes: new Date(HOJE.getFullYear(), HOJE.getMonth(), 1),
+      diaSelecionado: chave(HOJE),
+    };
+
+    function passaFiltro(item) {
+      if (tela.area !== 'todas' && item.area !== tela.area) return false;
+      if (tela.tipos.size && !tela.tipos.has(item.tipo)) return false;
+      return true;
+    }
+
+    // ---------- Itens ----------
+    function htmlItem(item, d, contexto) {
+      const e = d ? estadoDe(item, d) : estados[item.id] || null;
+      const meta = [TIPOS[item.tipo]];
+
+      if (contexto === 'resolver' && item.data) {
+        meta.push(`planejada para ${rotuloDia(deChave(item.data))}${item.hora ? ', ' + fmtHora(item.hora) : ''}`);
+      } else if (contexto !== 'encaixar') {
+        if (item.diaTodo) {
+          const fim = item.ate ? deChave(item.ate) : null;
+          if (fim && d && chave(d) === item.data) meta.push(`Dia todo · até ${fmtDiaCurto(fim)}`);
+          else if (fim) meta.push('Dia todo · continua');
+          else meta.push('Dia todo');
+        } else if (item.hora) {
+          meta.push(fmtHora(item.hora) + (item.fim ? '–' + fmtHora(item.fim) : ''));
+        } else if (item.data) {
+          meta.push('sem horário');
+        }
+      }
+      if (item.regra) meta.push(textoRegra(item.regra));
+      if (item.prazo && !e) meta.push(textoPrazo(item));
+      if (item.reagendadoDe && !e) meta.push(`reagendado de ${rotuloDia(deChave(item.reagendadoDe))}`);
+      if (e) meta.push(`<span class="estado">${textoEstado(e)}</span>`);
+
+      const vencido = !e && item.prazo && deChave(item.prazo) < HOJE;
+      const classes = [
+        'item', `area-${item.area}`,
+        e && e.estado === 'feito' ? 'is-feito' : '',
+        e && e.estado === 'nao' ? 'is-nao' : '',
+        e && e.estado === 'reagendado' ? 'is-reag' : '',
+        vencido ? 'vencido' : '',
+      ].join(' ');
+      const dia = d ? chave(d) : '';
+      const id = `${item.id}|${dia}`;
+      const aberto = tela.aberto === id;
+
+      return `
+        <li class="${classes}" data-id="${item.id}" data-dia="${dia}">
+          <div class="linha">
+            <button class="check" type="button" data-acao="check" aria-label="Marcar como feito">${icone('check')}</button>
+            <button class="corpo" type="button" data-acao="abrir" aria-expanded="${aberto}">
+              <div class="titulo">${icone(item.tipo)}<span>${item.titulo}</span></div>
+              <div class="meta">${meta.join(' · ')}</div>
+            </button>
+          </div>
+          ${aberto ? htmlPainel(item, e, contexto) : ''}
+        </li>`;
+    }
+
+    function htmlPainel(item, e, contexto) {
+      if (tela.painel === 'nao') {
+        return `
+          <div class="painel">
+            <p>No histórico, isso conta como:</p>
+            <div class="botoes">
+              <button class="btn falha" type="button" data-acao="falha">Falha</button>
+              <button class="btn" type="button" data-acao="neutro">Neutro</button>
+              <button class="btn" type="button" data-acao="voltar">Voltar</button>
+            </div>
+          </div>`;
+      }
+      if (tela.painel === 'reagendar') {
+        return `
+          <div class="painel">
+            <p>${contexto === 'encaixar' ? 'Quando vou fazer?' : 'Para quando?'}</p>
+            <div class="botoes">
+              <button class="btn" type="button" data-acao="mover" data-dias="0">Hoje</button>
+              <button class="btn" type="button" data-acao="mover" data-dias="1">Amanhã</button>
+              <button class="btn" type="button" data-acao="mover" data-dias="7">Daqui a 1 semana</button>
+              <label class="btn">Outra data <input type="date" data-acao="mover-data"></label>
+              <button class="btn" type="button" data-acao="voltar">Voltar</button>
+            </div>
+          </div>`;
+      }
+      if (e) {
+        return `
+          <div class="painel">
+            <div class="botoes"><button class="btn" type="button" data-acao="desfazer">Desfazer</button></div>
+          </div>`;
+      }
+      return `
+        <div class="painel">
+          <div class="botoes">
+            <button class="btn principal" type="button" data-acao="feito">Feito</button>
+            <button class="btn" type="button" data-acao="nao">Não fazer</button>
+            <button class="btn" type="button" data-acao="reagendar">${contexto === 'encaixar' ? 'Agendar' : 'Reagendar'}</button>
+          </div>
+        </div>`;
+    }
+
+    function secao(titulo, lista, classe = '', vazio = 'Nada planejado.') {
+      return `
+        <section class="secao ${classe}">
+          <h2>${titulo}</h2>
+          ${lista.length ? `<ul class="itens">${lista.join('')}</ul>` : `<p class="vazio">${vazio}</p>`}
+        </section>`;
+    }
+
+    // ---------- Aba Lista ----------
+    function paraResolver() {
+      return itens.filter((i) => i.tipo === 'tarefa' && passaFiltro(i) && !estados[i.id] && (
+        (i.prazo && deChave(i.prazo) < HOJE) || (i.data && deChave(i.data) < HOJE)
+      ));
+    }
+
+    function aEncaixar() {
+      return itens
+        .filter((i) => i.tipo === 'tarefa' && !i.data && passaFiltro(i))
+        .sort((a, b) => (a.prazo || '9999').localeCompare(b.prazo || '9999'));
+    }
+
+    function renderLista() {
+      let html = '';
+      const resolver = paraResolver();
+      if (resolver.length) {
+        html += secao('Para resolver', resolver.map((i) => htmlItem(i, null, 'resolver')), 'resolver');
+      }
+      for (let n = 0; n < 7; n++) {
+        const d = somarDias(HOJE, n);
+        const doDia = itens.filter((i) => passaFiltro(i) && ocorreEm(i, d)).sort(ordenar);
+        const titulo = n === 0 ? `Hoje · ${DIAS[d.getDay()]}, ${d.getDate()}`
+          : n === 1 ? `Amanhã · ${DIAS[d.getDay()]}, ${d.getDate()}`
+          : `${maiuscula(DIAS[d.getDay()])}, ${d.getDate()}`;
+        html += secao(titulo, doDia.map((i) => htmlItem(i, d, 'dia')));
+      }
+      return html;
+    }
+
+    function renderEncaixar() {
+      const lista = aEncaixar();
+      return secao('Tarefas sem dia para fazer', lista.map((i) => htmlItem(i, null, 'encaixar')), '', 'Nada por aqui.')
+        + '<p class="vazio" style="margin-top:12px">Toque em uma tarefa e depois em "Agendar" para escolher quando fazer.</p>';
+    }
+
+    // ---------- Aba Calendário ----------
+    function resumoDoDia(d) {
+      let total = 0;
+      let feitos = 0;
+      for (const item of itens) {
+        if (!ocorreEm(item, d) || item.diaTodo) continue;
+        const e = estadoDe(item, d);
+        if (e && (e.conta === 'neutro' || e.estado === 'reagendado')) continue;
+        total++;
+        if (e && e.estado === 'feito') feitos++;
+      }
+      return { total, feitos };
+    }
+
+    function renderCalendario() {
+      const ano = tela.mes.getFullYear();
+      const mes = tela.mes.getMonth();
+      const primeiro = new Date(ano, mes, 1);
+      const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+
+      let grade = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((l) => `<div class="sem">${l}</div>`).join('');
+      for (let i = 0; i < primeiro.getDay(); i++) grade += '<div></div>';
+
+      for (let dia = 1; dia <= diasNoMes; dia++) {
+        const d = new Date(ano, mes, dia);
+        const classes = ['dia'];
+        let extra = '';
+        if (d < HOJE) {
+          const { total, feitos } = resumoDoDia(d);
+          if (total) {
+            const p = feitos / total;
+            classes.push(p >= 0.8 ? 'n3' : p >= 0.4 ? 'n2' : 'n1');
+          }
+        } else {
+          const doDia = itens.filter((i) => ocorreEm(i, d) && !estadoDe(i, d));
+          const areas = [...new Set(doDia.map((i) => i.area))].sort();
+          extra = `<span class="pontos">${areas.map((a) => `<i style="background:var(--${a})"></i>`).join('')}</span>`;
+        }
+        if (itens.some((i) => i.area === 'trabalho' && i.diaTodo && ocorreEm(i, d))) extra += '<span class="faixa-trab"></span>';
+        if (chave(d) === chave(HOJE)) classes.push('hoje');
+        if (chave(d) === tela.diaSelecionado) classes.push('sel');
+        grade += `<button class="${classes.join(' ')}" type="button" data-acao="dia" data-dia="${chave(d)}">${dia}${extra}</button>`;
+      }
+
+      const sel = deChave(tela.diaSelecionado);
+      const doDia = itens.filter((i) => passaFiltro(i) && ocorreEm(i, sel)).sort(ordenar);
+      const tituloDia = `${maiuscula(DIAS[sel.getDay()])}, ${sel.getDate()} de ${MESES[sel.getMonth()]}`;
+
+      return `
+        <div class="mes-topo">
+          <button class="btn" type="button" data-acao="mes" data-passo="-1" aria-label="Mês anterior">‹</button>
+          <h2>${maiuscula(MESES[mes])} ${ano}</h2>
+          <button class="btn" type="button" data-acao="mes" data-passo="1" aria-label="Próximo mês">›</button>
+        </div>
+        <div class="grade">${grade}</div>
+        <div class="legenda">
+          <span><i style="background:var(--nivel-1)"></i>menos de 40%</span>
+          <span><i style="background:var(--nivel-2)"></i>40% a 79%</span>
+          <span><i style="background:var(--nivel-3)"></i>80% ou mais</span>
+          <span><i style="background:var(--trabalho);height:4px"></i>trabalho o dia todo</span>
+        </div>
+        ${secao(tituloDia, doDia.map((i) => htmlItem(i, sel, 'dia')))}
+        ${renderResumoMes(ano, mes, diasNoMes)}`;
+    }
+
+    function renderResumoMes(ano, mes, diasNoMes) {
+      const porItem = new Map();
+      let total = 0;
+      let feitos = 0;
+      for (let dia = 1; dia <= diasNoMes; dia++) {
+        const d = new Date(ano, mes, dia);
+        if (d >= HOJE) break;
+        for (const item of itens) {
+          if (!item.regra || !ocorreEm(item, d)) continue;
+          const e = estadoDe(item, d);
+          if (e && (e.conta === 'neutro' || e.estado === 'reagendado')) continue;
+          const linha = porItem.get(item) || { total: 0, feitos: 0 };
+          linha.total++;
+          total++;
+          if (e && e.estado === 'feito') { linha.feitos++; feitos++; }
+          porItem.set(item, linha);
+        }
+      }
+      if (!total) return secao('Resumo do mês', [], '', 'Ainda não há dias passados neste mês.');
+
+      const linhas = [...porItem.entries()].map(([item, l]) => `
+        <div class="barra-linha">
+          <span>${item.titulo}</span><span>${l.feitos} de ${l.total}</span>
+          <span class="barra"><i style="width:${Math.round((l.feitos / l.total) * 100)}%"></i></span>
+        </div>`).join('');
+
+      return `
+        <section class="secao">
+          <h2>Resumo do mês até hoje</h2>
+          <div class="resumo">
+            <div class="total"><strong>${Math.round((feitos / total) * 100)}%</strong> concluído (${feitos} de ${total})</div>
+            ${linhas}
+            <p class="vazio" style="margin:0">Itens marcados como "neutro" não entram na conta.</p>
+          </div>
+        </section>`;
+    }
+
+    // ---------- Render geral ----------
+    function renderFiltros() {
+      const areas = [['todas', 'Todas', ''], ['pessoal', 'Pessoal', 'var(--pessoal)'], ['trabalho', 'Trabalho', 'var(--trabalho)']];
+      document.getElementById('filtro-area').innerHTML = areas.map(([v, nome, cor]) => `
+        <button class="chip" type="button" data-filtro-area="${v}" aria-pressed="${tela.area === v}">
+          ${cor ? `<span class="ponto" style="background:${cor}"></span>` : ''}${nome}
+        </button>`).join('');
+      document.getElementById('filtro-tipo').innerHTML = Object.entries(TIPOS).map(([v, nome]) => `
+        <button class="chip" type="button" data-filtro-tipo="${v}" aria-pressed="${tela.tipos.has(v)}">${icone(v)}${nome}</button>`).join('');
+    }
+
+    function render() {
+      document.getElementById('data-hoje').textContent =
+        `${maiuscula(DIAS[HOJE.getDay()])}, ${HOJE.getDate()} de ${MESES[HOJE.getMonth()]}`;
+      renderFiltros();
+      const conteudo = document.getElementById('conteudo');
+      conteudo.innerHTML = tela.aba === 'lista' ? renderLista()
+        : tela.aba === 'encaixar' ? renderEncaixar()
+        : renderCalendario();
+      document.querySelectorAll('.aba').forEach((b) => {
+        if (b.dataset.aba === tela.aba) b.setAttribute('aria-current', 'page');
+        else b.removeAttribute('aria-current');
+      });
+      const qtd = itens.filter((i) => i.tipo === 'tarefa' && !i.data && !estados[i.id]).length;
+      const badge = document.getElementById('badge-encaixar');
+      badge.textContent = qtd;
+      badge.hidden = !qtd;
+    }
+
+    // ---------- Ações nos itens ----------
+    function mover(item, d, nova) {
+      if (item.regra) {
+        estados[chaveOcorrencia(item, d)] = { estado: 'reagendado', para: chave(nova) };
+        const { id, regra, ...resto } = item;
+        itens.push({ ...resto, id: novoId(), data: chave(nova) });
+      } else {
+        item.reagendadoDe = item.data || null;
+        item.data = chave(nova);
+        delete estados[item.id];
+      }
+      tela.aberto = null;
+      avisar(`Movido para ${rotuloDia(nova)}.`);
+    }
+
+    document.getElementById('conteudo').addEventListener('click', (ev) => {
+      const alvo = ev.target.closest('[data-acao]');
+      if (!alvo) return;
+      const acao = alvo.dataset.acao;
+
+      if (acao === 'mes') {
+        tela.mes = new Date(tela.mes.getFullYear(), tela.mes.getMonth() + Number(alvo.dataset.passo), 1);
+        const mesDeHoje = tela.mes.getFullYear() === HOJE.getFullYear() && tela.mes.getMonth() === HOJE.getMonth();
+        tela.diaSelecionado = chave(mesDeHoje ? HOJE : tela.mes);
+        tela.aberto = null;
+        render();
+        return;
+      }
+      if (acao === 'dia') {
+        tela.diaSelecionado = alvo.dataset.dia;
+        tela.aberto = null;
+        render();
+        return;
+      }
+      if (acao === 'mover-data') return;
+
+      const li = alvo.closest('.item');
+      if (!li) return;
+      const item = itens.find((i) => i.id === li.dataset.id);
+      const d = li.dataset.dia ? deChave(li.dataset.dia) : null;
+      const k = chaveOcorrencia(item, d);
+      const idAberto = `${item.id}|${li.dataset.dia}`;
+
+      switch (acao) {
+        case 'abrir':
+          tela.aberto = tela.aberto === idAberto ? null : idAberto;
+          tela.painel = 'acoes';
+          break;
+        case 'check': {
+          const e = estadoDe(item, d);
+          if (e && e.estado === 'feito') estados[k] = { estado: 'pendente' };
+          else estados[k] = { estado: 'feito' };
+          if (estados[k].estado === 'pendente') delete estados[k];
+          tela.aberto = null;
+          break;
+        }
+        case 'feito': estados[k] = { estado: 'feito' }; tela.aberto = null; break;
+        case 'nao': tela.painel = 'nao'; break;
+        case 'reagendar': tela.painel = 'reagendar'; break;
+        case 'voltar': tela.painel = 'acoes'; break;
+        case 'falha': estados[k] = { estado: 'nao', conta: 'falha' }; tela.aberto = null; break;
+        case 'neutro': estados[k] = { estado: 'nao', conta: 'neutro' }; tela.aberto = null; break;
+        case 'desfazer': delete estados[k]; tela.painel = 'acoes'; break;
+        case 'mover': mover(item, d, somarDias(HOJE, Number(alvo.dataset.dias))); break;
+        default: return;
+      }
+      render();
+    });
+
+    document.getElementById('conteudo').addEventListener('change', (ev) => {
+      if (ev.target.dataset.acao !== 'mover-data' || !ev.target.value) return;
+      const li = ev.target.closest('.item');
+      const item = itens.find((i) => i.id === li.dataset.id);
+      const d = li.dataset.dia ? deChave(li.dataset.dia) : null;
+      mover(item, d, deChave(ev.target.value));
+      render();
+    });
+
+    document.querySelector('header.topo').addEventListener('click', (ev) => {
+      const area = ev.target.closest('[data-filtro-area]');
+      const tipo = ev.target.closest('[data-filtro-tipo]');
+      if (area) tela.area = area.dataset.filtroArea;
+      if (tipo) {
+        const v = tipo.dataset.filtroTipo;
+        if (tela.tipos.has(v)) tela.tipos.delete(v); else tela.tipos.add(v);
+      }
+      if (area || tipo) { tela.aberto = null; render(); }
+    });
+
+    document.querySelector('nav.abas').addEventListener('click', (ev) => {
+      const aba = ev.target.closest('[data-aba]');
+      if (!aba) return;
+      tela.aba = aba.dataset.aba;
+      tela.aberto = null;
+      render();
+      window.scrollTo(0, 0);
+    });
+
+    let timerAviso;
+    function avisar(texto) {
+      const el = document.getElementById('aviso-salvo');
+      el.textContent = texto;
+      el.hidden = false;
+      clearTimeout(timerAviso);
+      timerAviso = setTimeout(() => { el.hidden = true; }, 2500);
+    }
+
+    // ---------- Cadastro rápido ----------
+    const form = {
+      tipo: 'tarefa',
+      area: 'pessoal',
+      dias: new Set(),
+    };
+    const $ = (id) => document.getElementById(id);
+
+    function renderForm() {
+      $('f-tipo').innerHTML = Object.entries(TIPOS).map(([v, nome]) => `
+        <button class="chip opcao" type="button" data-f-tipo="${v}" aria-pressed="${form.tipo === v}">${icone(v)}${nome}</button>`).join('');
+      $('f-area').innerHTML = Object.entries(AREAS).map(([v, nome]) => `
+        <button class="chip opcao" type="button" data-f-area="${v}" aria-pressed="${form.area === v}">
+          <span class="ponto" style="background:var(--${v})"></span>${nome}
+        </button>`).join('');
+      $('f-dias-semana').innerHTML = DIAS_CURTOS.map((nome, i) => `
+        <button class="chip opcao" type="button" data-f-dia="${i}" aria-pressed="${form.dias.has(i)}">${nome}</button>`).join('');
+
+      const tarefa = form.tipo === 'tarefa';
+      $('f-bloco-tarefa').hidden = !tarefa;
+      $('f-bloco-agenda').hidden = tarefa;
+      const compromisso = form.tipo === 'compromisso';
+      $('f-dia-todo-rotulo').hidden = !compromisso;
+      $('f-campo-ate').hidden = !compromisso;
+      $('f-rotulo-data').textContent = form.tipo === 'habito' ? 'Começa em (data e hora)' : 'Data e hora';
+      $('f-hora').disabled = compromisso && $('f-dia-todo').checked;
+
+      const rep = $('f-repeticao');
+      rep.querySelector('option[value="nao"]').hidden = form.tipo === 'habito';
+      if (form.tipo === 'habito' && rep.value === 'nao') rep.value = 'todo';
+      $('f-dias-semana').hidden = rep.value !== 'dias';
+      $('f-intervalo').hidden = rep.value !== 'intervalo';
+      verificarConflito();
+    }
+
+    function dataEscolhida() {
+      const v = form.tipo === 'tarefa' ? $('f-quando-data').value : $('f-data').value;
+      return v ? deChave(v) : null;
+    }
+
+    function verificarConflito() {
+      const d = dataEscolhida();
+      const el = $('f-conflito');
+      if (!d || form.area !== 'pessoal') { el.hidden = true; return; }
+      const fim = form.tipo === 'compromisso' && $('f-ate').value ? deChave($('f-ate').value) : d;
+      const choques = [];
+      for (let x = new Date(d); x <= fim; x = somarDias(x, 1)) {
+        itens.filter((i) => i.area === 'trabalho' && i.tipo === 'compromisso' && ocorreEm(i, x))
+          .forEach((i) => { if (!choques.includes(i)) choques.push(i); });
+      }
+      el.hidden = !choques.length;
+      el.textContent = choques.length
+        ? `Atenção: nesse dia você tem ${choques.map((i) => `"${i.titulo}"`).join(' e ')} (Trabalho). Dá para salvar mesmo assim.`
+        : '';
+    }
+
+    function abrirForm() {
+      form.tipo = 'tarefa';
+      form.area = 'pessoal';
+      form.dias = new Set([HOJE.getDay()]);
+      $('form-novo').reset();
+      $('f-data').value = chave(HOJE);
+      $('f-erro').hidden = true;
+      renderForm();
+      $('fundo-novo').hidden = false;
+      $('f-titulo').focus();
+    }
+
+    function fecharForm() { $('fundo-novo').hidden = true; }
+
+    $('btn-novo').addEventListener('click', abrirForm);
+    $('f-cancelar').addEventListener('click', fecharForm);
+    $('fundo-novo').addEventListener('click', (ev) => { if (ev.target === ev.currentTarget) fecharForm(); });
+
+    $('form-novo').addEventListener('click', (ev) => {
+      const t = ev.target.closest('[data-f-tipo]');
+      const a = ev.target.closest('[data-f-area]');
+      const d = ev.target.closest('[data-f-dia]');
+      if (t) form.tipo = t.dataset.fTipo;
+      if (a) form.area = a.dataset.fArea;
+      if (d) {
+        const i = Number(d.dataset.fDia);
+        if (form.dias.has(i)) form.dias.delete(i); else form.dias.add(i);
+      }
+      if (t || a || d) renderForm();
+    });
+    $('form-novo').addEventListener('change', renderForm);
+
+    $('form-novo').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const erro = (texto) => { $('f-erro').textContent = texto; $('f-erro').hidden = false; };
+      const titulo = $('f-titulo').value.trim();
+      if (!titulo) return erro('Escreva um título.');
+
+      const item = { id: novoId(), titulo, tipo: form.tipo, area: form.area };
+
+      if (form.tipo === 'tarefa') {
+        if ($('f-quando-data').value) item.data = $('f-quando-data').value;
+        if ($('f-quando-hora').value) {
+          if (!item.data) return erro('Escolha também o dia em "Quando vou fazer".');
+          item.hora = $('f-quando-hora').value;
+        }
+        if ($('f-prazo').value) item.prazo = $('f-prazo').value;
+      } else {
+        const diaTodo = form.tipo === 'compromisso' && $('f-dia-todo').checked;
+        if (!$('f-data').value) return erro('Escolha a data.');
+        if (!diaTodo && !$('f-hora').value) return erro(`Escolha a hora. Para ${TIPOS[form.tipo].toLowerCase()}, data e hora são obrigatórias.`);
+        if (diaTodo) item.diaTodo = true; else item.hora = $('f-hora').value;
+
+        const rep = $('f-repeticao').value;
+        const inicio = $('f-data').value;
+        if (rep === 'nao') {
+          item.data = inicio;
+          if (form.tipo === 'compromisso' && $('f-ate').value) {
+            if ($('f-ate').value < inicio) return erro('A data final precisa ser depois da data inicial.');
+            item.ate = $('f-ate').value;
+          }
+        } else if (rep === 'todo') item.regra = { semanal: [0, 1, 2, 3, 4, 5, 6], inicio };
+        else if (rep === 'uteis') item.regra = { semanal: [1, 2, 3, 4, 5], inicio };
+        else if (rep === 'dias') {
+          if (!form.dias.size) return erro('Escolha pelo menos um dia da semana.');
+          item.regra = { semanal: [...form.dias].sort(), inicio };
+        } else if (rep === 'intervalo') {
+          const n = Number($('f-intervalo-n').value);
+          if (!n || n < 1) return erro('Informe de quantos em quantos dias ou semanas.');
+          item.regra = { intervalo: n, unidade: $('f-intervalo-unidade').value, inicio };
+        } else if (rep === 'mensal') item.regra = { mensal: deChave(inicio).getDate(), inicio };
+      }
+
+      itens.push(item);
+      fecharForm();
+      if (item.tipo === 'tarefa' && !item.data) {
+        tela.aba = 'encaixar';
+        avisar('Salvo em "A encaixar".');
+      } else {
+        avisar('Salvo.');
+      }
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
