@@ -1755,6 +1755,8 @@
     }
 
     // ============ Fluxos guiados ============
+    const PASSOS_FLUXO = { fechamento: 3, planejamento: 4 };
+
     function htmlProgresso(passo, total) {
       return `<div class="progresso">${Array.from({ length: total }, (_, i) => `<i class="${i <= passo ? 'ok' : ''}"></i>`).join('')}</div>`;
     }
@@ -1783,7 +1785,7 @@
 
     function fluxoFechamento(f) {
       const d = deChave(f.dia);
-      const passos = 3;
+      const passos = PASSOS_FLUXO.fechamento;
       let miolo = '';
       if (f.passo === 0) {
         const abertos = itensDoDia(d, false).filter((i) => !estadoDe(i, d) && !i.diaTodo && !variosDias(i));
@@ -1821,7 +1823,7 @@
     }
 
     function fluxoPlanejamento(f) {
-      const passos = 4;
+      const passos = PASSOS_FLUXO.planejamento;
       let miolo = '';
       if (f.passo === 0) {
         const dias = [];
@@ -2552,27 +2554,45 @@
       if (document.visibilityState === 'visible' && chave(new Date()) !== chave(HOJE)) location.reload();
     });
 
-    // Na aba Dia, deslizar o dedo troca de dia: para a esquerda, o dia seguinte;
-    // para a direita, o dia anterior.
+    // Deslizar o dedo faz o mesmo que as setas ‹ › da tela: para a esquerda, avança;
+    // para a direita, volta. Vale para o dia (aba Dia), o mês (Calendário e Histórico)
+    // e os passos do fechamento do dia e do planejamento da semana.
+    function aoDeslizar(passo) {
+      const f = tela.fluxo;
+      if (f && PASSOS_FLUXO[f.tipo]) {
+        const novo = f.passo + passo;
+        if (novo < 0 || novo >= PASSOS_FLUXO[f.tipo]) return false; // salvar só pelo botão
+        f.passo = novo;
+        tela.aberto = null;
+        return true;
+      }
+      if (f || !$('fundo-novo').hidden) return false;
+      if (tela.aba === 'dia') tela.dia = chave(somarDias(deChave(tela.dia), passo));
+      else if (tela.aba === 'calendario') acoesGerais.mes({ dataset: { passo } });
+      else if (tela.aba === 'historico') acoesGerais['hist-mes']({ dataset: { passo } });
+      else return false;
+      tela.aberto = null;
+      return true;
+    }
+
     let toqueInicio = null;
-    $('conteudo').addEventListener('touchstart', (ev) => {
-      // Não troca de dia ao rolar listas de botões nem ao mexer em campos.
-      const ignorar = ev.target.closest('input, textarea, select, .chips, .numeros-meta');
-      toqueInicio = tela.aba === 'dia' && !ignorar && ev.touches.length === 1
+    document.addEventListener('touchstart', (ev) => {
+      // Não desliza ao rolar listas de botões nem ao mexer em campos.
+      const ignorar = ev.target.closest('input, textarea, select, .chips, .numeros-meta, nav.abas');
+      toqueInicio = !ignorar && ev.touches.length === 1
         ? { x: ev.touches[0].clientX, y: ev.touches[0].clientY }
         : null;
     }, { passive: true });
-    $('conteudo').addEventListener('touchend', (ev) => {
+    document.addEventListener('touchend', (ev) => {
       if (!toqueInicio) return;
       const dx = ev.changedTouches[0].clientX - toqueInicio.x;
       const dy = ev.changedTouches[0].clientY - toqueInicio.y;
       toqueInicio = null;
       // Só conta como deslize se for longo e mais horizontal do que vertical.
       if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      tela.dia = chave(somarDias(deChave(tela.dia), dx < 0 ? 1 : -1));
-      tela.aberto = null;
+      if (!aoDeslizar(dx < 0 ? 1 : -1)) return;
       render();
-      window.scrollTo(0, 0);
+      if (!tela.fluxo) window.scrollTo(0, 0);
     }, { passive: true });
 
     // Com o app aberto na aba Dia, atualiza o "Agora" a cada minuto
