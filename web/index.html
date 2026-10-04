@@ -2948,7 +2948,10 @@
           body: JSON.stringify({ email: $('login-email').value.trim(), password: $('login-senha').value }),
         });
         if (!resp.ok) {
-          mostrarLogin(resp.status === 400 ? 'E-mail ou senha incorretos.' : `Não foi possível entrar (erro ${resp.status}).`);
+          const erro = await resp.json().catch(() => ({}));
+          mostrarLogin(erro.error_code === 'email_not_confirmed'
+            ? 'Esta conta ainda não foi confirmada. No Supabase, confirme o usuário em Authentication > Users.'
+            : resp.status === 400 ? 'E-mail ou senha incorretos.' : `Não foi possível entrar (erro ${resp.status}).`);
           return;
         }
         guardarSessao(await resp.json());
