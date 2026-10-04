@@ -125,6 +125,7 @@ O registro aparece no calendário (no dia escolhido) e no histórico (diário e 
 Coisas que não têm horário e não são hábitos, marcadas uma vez por dia:
 - **Parar** (ex.: comer doces): "Evitei" ou "Não evitei".
 - **Começar** (ex.: comer salada, comer frutas): "Fiz" ou "Não fiz".
+- **Por quantidade (opcional):** a meta pode ter um número por dia, marcado com um toque (0, 1, 2…). Em "Começar", conta como cumprida se chegar pelo menos ao alvo (ex.: pelo menos 2 porções de fruta). Em "Parar", se ficar no máximo no limite (ex.: nenhum doce). O compilado mostra também o total e a média por dia.
 
 Aparecem na visão do dia e no fechamento do dia, e é possível criar metas novas. O compilado (dias cumpridos, não cumpridos e sem marcar) aparece no resumo do mês, no histórico (últimos 30 dias), no planejamento da semana e, na primeira semana de cada mês, como "Compilado do mês anterior" na visão do dia.
 
