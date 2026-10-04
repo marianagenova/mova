@@ -776,6 +776,16 @@
     if (!dados.modelos) dados.modelos = modelosPadrao(); // dados salvos antes de existir o editor de modelos
     if (!dados.trilha) dados.trilha = trilhaInicial(); // dados salvos antes de existir a trilha de estudos
     if (!dados.coresTemas) dados.coresTemas = {};
+    // Ajuste feito uma vez só: o uso começou em 01/10, então o que se repete e as metas
+    // contam desde esse dia (os dias 1 a 3 ficam para marcar à mão).
+    if (!dados.inicioAjustado) {
+      const INICIO = '2026-10-01';
+      if (!dados.criadoEm || dados.criadoEm > INICIO) dados.criadoEm = INICIO;
+      for (const item of dados.itens) {
+        if (item.regra && item.regra.inicio > INICIO && item.regra.inicio <= '2026-10-04') item.regra.inicio = INICIO;
+      }
+      dados.inicioAjustado = INICIO;
+    }
     // Cores dos temas na ordem da trilha, para ficarem iguais em todos os aparelhos.
     for (const m of dados.trilha) if (!(m.tema in dados.coresTemas)) dados.coresTemas[m.tema] = Object.keys(dados.coresTemas).length % 8;
     const { itens, estados, registros, metas, marcas, modelos, trilha, coresTemas } = dados;
@@ -1960,7 +1970,7 @@
         </div>`;
       if (futuro) return html + '<p class="vazio">Este mês ainda não começou.</p>';
 
-      // Dias que já terminaram (o que se repete) e dias até hoje (metas e registros).
+      // Dias que já terminaram (o que se repete) e dias até hoje (metas, energia, motivos e registros).
       // No notebook, os quadros do mês ficam lado a lado.
       html += '<div class="grade-secoes">';
       const diasMes = diasDoMesAteHoje(ano, mes);
@@ -2003,9 +2013,9 @@
         </section>`;
 
       // Energia
-      const comRegistro = passados.filter((d) => registros[chave(d)]);
+      const comRegistro = diasMes.filter((d) => registros[chave(d)]);
       const media = comRegistro.length ? comRegistro.reduce((s, d) => s + registros[chave(d)].energia, 0) / comRegistro.length : 0;
-      const barras = passados.map((d) => {
+      const barras = diasMes.map((d) => {
         const reg = registros[chave(d)];
         const rotulo = d.getDate() === 1 || d.getDate() % 5 === 0 ? d.getDate() : '';
         return `<div title="${fmtDiaCurto(d)}"><i class="${reg ? '' : 'vazio'}" style="height:${reg ? reg.energia * 20 : 4}%"></i><span>${rotulo}</span></div>`;
@@ -2017,7 +2027,7 @@
 
       // Motivos de "não fiz"
       const contagem = {};
-      for (const d of passados) {
+      for (const d of diasMes) {
         for (const item of itens) {
           if (!ocorreEm(item, d)) continue;
           const e = estadoDe(item, d);
