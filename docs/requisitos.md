@@ -113,6 +113,8 @@ Cada informação aparece em um lugar só:
 
 O planejamento de domingo é a única exceção: mostra os números da semana, porque faz parte do ritual de planejar.
 
+**Ajustes** fica fora da barra de abas, no ícone de engrenagem do cabeçalho, para não ocupar espaço no dia a dia: editor de modelos (4.13), backup dos dados e teste de notificações.
+
 ### 4.5 Trabalho e conflitos
 - Itens de trabalho (viagens, reuniões fora do horário) entram na agenda pessoal, inclusive ocupando vários dias.
 - **Aviso de conflito:** ao agendar algo pessoal em um dia com item de trabalho, o app avisa. Compromissos ocupam o calendário; tarefas agendadas pela própria pessoa não bloqueiam.
@@ -140,11 +142,11 @@ O registro aparece no calendário (no dia escolhido) e, somado, no Histórico do
 
 ### 4.9.1 Metas do dia
 Coisas que não têm horário e não são tarefas, marcadas uma vez por dia:
-- **Parar** (ex.: comer doces): "Evitei" ou "Não evitei".
-- **Começar** (ex.: comer salada, comer frutas): "Fiz" ou "Não fiz".
-- **Por quantidade (opcional):** a meta pode ter um número por dia, marcado com um toque (0, 1, 2…). Em "Começar", conta como cumprida se chegar pelo menos ao alvo (ex.: pelo menos 2 porções de fruta). Em "Parar", se ficar no máximo no limite (ex.: nenhum doce). O compilado mostra também o total e a média por dia.
+- **Quero menos disso** (ex.: comer doces): "Evitei" ou "Não evitei".
+- **Quero mais disso** (ex.: comer salada, comer frutas): "Fiz" ou "Não fiz".
+- **Por quantidade (opcional):** a meta pode ter um número por dia, marcado com um toque (0, 1, 2…). Em "quero mais disso", conta como cumprida se chegar pelo menos ao alvo (ex.: pelo menos 2 porções de fruta). Em "quero menos disso", se ficar no máximo no limite (ex.: no máximo 1 doce). O compilado mostra também o total e a média por dia.
 
-São marcadas na visão do dia ou no fechamento do dia, e é possível criar metas novas. O compilado (dias cumpridos, não cumpridos e sem marcar) fica no Histórico, por mês, e na semana do planejamento de domingo. Na primeira semana de cada mês, a visão do dia avisa que o compilado do mês anterior está pronto, com um botão que leva até ele.
+São marcadas na visão do dia ou no fechamento do dia, e é possível criar, editar e excluir metas (em "Editar metas"). Na tela não aparecem etiquetas: a direção da meta fica na frase do alvo ("no máximo 1 por dia", "pelo menos 2 por dia"). Mudar o alvo de uma meta recalcula os dias já marcados. O compilado (dias cumpridos, não cumpridos e sem marcar) fica no Histórico, por mês, e na semana do planejamento de domingo. Na primeira semana de cada mês, a visão do dia avisa que o compilado do mês anterior está pronto, com um botão que leva até ele.
 
 ### 4.10 Visão do dia
 - **Trocar de dia:** setas ‹ › ou deslizar o dedo (para a esquerda, o dia seguinte; para a direita, o dia anterior).
@@ -161,7 +163,7 @@ São marcadas na visão do dia ou no fechamento do dia, e é possível criar met
 - **Motivo do "não fiz":** opcional, com opções rápidas (cansaço, imprevisto, trabalho, saúde, esqueci, outro).
 
 ### 4.13 Modelos
-Modelos criam um item já preenchido e os itens que costumam vir junto:
+Modelos criam um item já preenchido e as tarefas que costumam vir junto. Eles são criados e editados em **Ajustes** (engrenagem): nome, tipo, área, título sugerido, quantos dias costuma durar e a lista de tarefas extras, cada uma com o dia contado a partir do início ou do fim do item (ex.: 1 dia antes do início = véspera), hora opcional e etapas. Modelos que já vêm prontos:
 - **Viagem de trabalho:** compromisso de vários dias (com hora de ida e, opcionalmente, hora de volta), mais "Fazer a mala" na véspera (com a lista da mala).
 - **Consulta:** compromisso, mais "Separar documentos e exames" na véspera.
 

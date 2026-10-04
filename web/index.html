@@ -48,6 +48,21 @@
     .wrap { max-width: 520px; margin: 0 auto; padding-inline: 16px; }
 
 
+    header.topo .wrap { position: relative; }
+    .engrenagem {
+      position: absolute; right: 8px; top: 0; width: 40px; height: 40px;
+      border: 0; background: none; color: var(--muted); display: grid; place-items: center;
+    }
+    .engrenagem svg.icone { width: 22px; height: 22px; }
+
+    /* Ajustes: editor de modelos */
+    .modelo-card { display: grid; gap: 4px; }
+    .modelo-card .sub { color: var(--muted); font-size: 0.875rem; }
+    .extra { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 8px; margin-top: 8px; }
+    .extra input[type="text"], .extra textarea, .editor-modelo input[type="text"] { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+    .extra select, .extra input[type="number"], .editor-modelo input[type="number"] { padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+    .extra input[type="number"], .editor-modelo input[type="number"] { width: 72px; }
+
     header.topo {
       background: var(--bg);
       border-bottom: 1px solid var(--line);
@@ -222,9 +237,6 @@
     .meta-linha .btn { flex: 1; }
     .meta-linha .btn.sim[aria-pressed="true"] { background: var(--pessoal); border-color: var(--pessoal); }
     .meta-linha .btn.nao[aria-pressed="true"] { background: #b5584d; border-color: #b5584d; }
-    .tag-meta { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 6px; padding: 2px 6px; vertical-align: 1px; }
-    .tag-meta.parar { background: var(--aviso-claro); color: var(--aviso); }
-    .tag-meta.comecar { background: var(--pessoal-claro); color: var(--pessoal); }
     .meta-nova { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
     .meta-nova input { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
     .meta-comp { display: grid; gap: 6px; }
@@ -360,6 +372,9 @@
 
   <header class="topo" id="topo">
     <div class="wrap">
+      <button class="engrenagem" type="button" data-acao="ajustes-abrir" aria-label="Ajustes">
+        <svg class="icone" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
       <h1>Mova</h1>
       <p class="data-hoje" id="data-hoje"></p>
       <div class="chips" id="filtro-area"></div>
@@ -634,7 +649,21 @@
         planoTreino: '',
         ultimoBackup: null,
         criadoEm: inicio,
+        modelos: modelosPadrao(),
       };
+    }
+
+    // Modelos: preenchem o cadastro e criam junto as tarefas que costumam vir com o item.
+    // Cada tarefa extra tem o dia contado a partir do início ou do fim do item
+    // (ex.: 1 dia antes do início = véspera).
+    function modelosPadrao() {
+      return [
+        { id: 'viagem', nome: 'Viagem de trabalho', tipo: 'compromisso', area: 'trabalho', titulo: 'Viagem a ', dias: 2,
+          extras: [{ titulo: 'Fazer a mala', area: 'pessoal', dias: 1, sentido: 'antes', base: 'inicio', hora: '20:00',
+            etapas: ['Roupas', 'Carregadores', 'Documentos e cartão de embarque', 'Remédios'] }] },
+        { id: 'consulta', nome: 'Consulta', tipo: 'compromisso', area: 'pessoal', titulo: 'Consulta ', duracao: 60,
+          extras: [{ titulo: 'Separar documentos e exames', area: 'pessoal', dias: 1, sentido: 'antes', base: 'inicio', hora: '20:00', etapas: [] }] },
+      ];
     }
 
     function carregar() {
@@ -650,7 +679,8 @@
     const dados = carregar();
     // O tipo Hábito foi unido a Tarefa: o que se repete agora é uma tarefa com repetição.
     for (const item of dados.itens) if (item.tipo === 'habito') item.tipo = 'tarefa';
-    const { itens, estados, registros, metas, marcas } = dados;
+    if (!dados.modelos) dados.modelos = modelosPadrao(); // dados salvos antes de existir o editor de modelos
+    const { itens, estados, registros, metas, marcas, modelos } = dados;
     let planoTreino = dados.planoTreino || '';
 
     let proximoId = 1 + Math.max(0, ...itens.map((i) => Number(i.id.slice(1)) || 0));
@@ -672,7 +702,7 @@
 
     // Metas do dia: coisas sem horário, marcadas uma vez por dia.
     // Em "começar", cumpre quem chega ao alvo; em "parar", quem fica no máximo no alvo.
-    const TIPO_META = { parar: 'Parar', comecar: 'Começar' };
+    const TIPO_META = { comecar: 'Quero mais disso', parar: 'Quero menos disso' };
     const ROTULO_META = { parar: ['Evitei', 'Não evitei'], comecar: ['Fiz', 'Não fiz'] };
     const porQuantidade = (m) => m.alvo !== undefined;
 
@@ -684,8 +714,8 @@
 
     function textoAlvo(m) {
       if (!porQuantidade(m)) return '';
-      if (m.tipo === 'parar') return m.alvo === 0 ? `Meta: nenhum (${m.unidade})` : `Meta: no máximo ${m.alvo} ${m.unidade}`;
-      return `Meta: pelo menos ${m.alvo} ${m.unidade}`;
+      if (m.tipo === 'parar') return m.alvo === 0 ? `Meta: nenhum (${m.unidade}) por dia` : `Meta: no máximo ${m.alvo} ${m.unidade} por dia`;
+      return `Meta: pelo menos ${m.alvo} ${m.unidade} por dia`;
     }
 
     // ============ Regras de ocorrência ============
@@ -1030,7 +1060,6 @@
 
     function desdeOInicio(d) { return !dados.criadoEm || d >= deChave(dados.criadoEm); }
 
-    function htmlTagMeta(m) { return `<span class="tag-meta ${m.tipo}">${TIPO_META[m.tipo]}</span>`; }
 
     function htmlMetasDoDia(d) {
       const k = chave(d);
@@ -1054,11 +1083,14 @@
         }
         return `
           <div class="meta-linha">
-            <div>${htmlTagMeta(m)} <strong>${esc(m.titulo)}</strong>
+            <div><strong>${esc(m.titulo)}</strong>
               ${porQuantidade(m) ? `<div class="sub">${textoAlvo(m)}</div>` : ''}
             </div>
             ${tela.editarMetas
-              ? `<div class="botoes"><button class="btn falha" type="button" data-acao="meta-excluir" data-meta="${m.id}">Excluir "${esc(m.titulo)}"</button></div>`
+              ? `<div class="botoes">
+                  <button class="btn" type="button" data-acao="meta-editar" data-meta="${m.id}">Editar</button>
+                  <button class="btn falha" type="button" data-acao="meta-excluir" data-meta="${m.id}">Excluir</button>
+                </div>`
               : botoes}
           </div>`;
       }).join('');
@@ -1070,10 +1102,13 @@
           <div class="botoes">${Object.entries(TIPO_META).map(([v, nome]) => `
             <button class="btn" type="button" data-acao="meta-tipo" data-valor="${v}" aria-pressed="${nova.tipo === v}">${nome}</button>`).join('')}
           </div>
-          <div class="botoes">
-            <button class="btn" type="button" data-acao="meta-medida" data-valor="simnao" aria-pressed="${!nova.quantidade}">Sim ou não</button>
-            <button class="btn" type="button" data-acao="meta-medida" data-valor="quantidade" aria-pressed="${nova.quantidade}">Quantidade</button>
-          </div>
+          ${nova.id
+            // Na edição, o jeito de marcar não muda, para não misturar os dias já marcados.
+            ? `<p class="sub">Marcada por ${nova.quantidade ? 'quantidade' : 'sim ou não'}. Mudar o alvo recalcula os dias já marcados.</p>`
+            : `<div class="botoes">
+                <button class="btn" type="button" data-acao="meta-medida" data-valor="simnao" aria-pressed="${!nova.quantidade}">Sim ou não</button>
+                <button class="btn" type="button" data-acao="meta-medida" data-valor="quantidade" aria-pressed="${nova.quantidade}">Quantidade</button>
+              </div>`}
           ${nova.quantidade ? `
             <div class="campo-linha">
               ${nova.tipo === 'parar' ? 'No máximo' : 'Pelo menos'}
@@ -1088,7 +1123,7 @@
         </div>`
         : `<div class="botoes">
             <button class="btn" type="button" data-acao="meta-nova">+ Nova meta</button>
-            ${metas.length ? `<button class="btn" type="button" data-acao="metas-editar">${tela.editarMetas ? 'Pronto' : 'Excluir metas'}</button>` : ''}
+            ${metas.length ? `<button class="btn" type="button" data-acao="metas-editar">${tela.editarMetas ? 'Pronto' : 'Editar metas'}</button>` : ''}
           </div>`;
 
       return `<div class="metas">${linhas || '<p class="vazio">Nenhuma meta ainda.</p>'}</div>${formNova}`;
@@ -1113,7 +1148,7 @@
         return `
           <div class="meta-comp">
             <div class="barra-linha">
-              <span>${htmlTagMeta(m)} ${esc(m.titulo)}</span>
+              <span>${esc(m.titulo)}</span>
               <span><strong>${ok} de ${dias.length}</strong> dias${semMarcar ? ` <small>(${semMarcar} sem marcar)</small>` : ''}</span>
             </div>
             ${quantidade}
@@ -1478,6 +1513,121 @@
         <p class="vazio" style="margin-top:16px"><a href="teste/">Testar notificações</a></p>`;
     }
 
+    // ============ Ajustes (fora da barra de abas, pela engrenagem) ============
+    function descricaoQuando(x) {
+      const base = x.base === 'fim' ? 'do fim' : 'do início';
+      let quando;
+      if (x.dias === 0) quando = x.base === 'fim' ? 'no último dia' : 'no mesmo dia';
+      else if (x.dias === 1 && x.sentido === 'antes' && x.base === 'inicio') quando = 'na véspera';
+      else quando = `${x.dias} ${x.dias === 1 ? 'dia' : 'dias'} ${x.sentido} ${base}`;
+      return quando + (x.hora ? `, às ${fmtHora(x.hora)}` : '');
+    }
+
+    function textoExtras(m) {
+      if (!m.extras.length) return 'Não cria outras tarefas.';
+      return 'Também cria: ' + m.extras.map((x) => `"${x.titulo}" ${descricaoQuando(x)}${x.etapas.length ? ` (${x.etapas.length} etapas)` : ''}`).join('; ') + '.';
+    }
+
+    function renderAjustes() {
+      let html = `
+        <div class="dia-nav">
+          <button class="btn" type="button" data-acao="ajustes-voltar">‹ Voltar</button>
+          <h2>Ajustes</h2>
+          <span style="width:72px"></span>
+        </div>
+        <section class="secao"><h2><span>Modelos</span></h2>
+          <p class="vazio">Aparecem no botão + e já preenchem o item, criando junto as tarefas que costumam vir com ele.</p>`;
+      if (tela.modeloEditando) {
+        html += htmlEditorModelo(tela.modeloEditando);
+      } else {
+        html += modelos.map((m) => `
+          <div class="card modelo-card">
+            <strong>${esc(m.nome)}</strong>
+            <span class="sub">${TIPOS[m.tipo]} · ${AREAS[m.area]}${m.dias > 1 ? ` · ${m.dias} dias` : ''}</span>
+            <span class="sub">${esc(textoExtras(m))}</span>
+            <div class="botoes">
+              <button class="btn" type="button" data-acao="modelo-editar" data-id="${m.id}">Editar</button>
+              <button class="btn falha" type="button" data-acao="modelo-excluir" data-id="${m.id}">Excluir</button>
+            </div>
+          </div>`).join('') || '<p class="vazio">Nenhum modelo.</p>';
+        html += '<div class="botoes" style="margin-top:12px"><button class="btn" type="button" data-acao="modelo-novo">+ Novo modelo</button></div>';
+      }
+      return html + '</section>' + htmlDados();
+    }
+
+    function htmlEditorModelo(m) {
+      const chips = (acao, opcoes, atual, extra = "") => opcoes.map(([v, nome]) => `
+        <button class="btn" type="button" data-acao="${acao}" ${extra} data-valor="${v}" aria-pressed="${atual === v}">${nome}</button>`).join("");
+      const extras = m.extras.map((x, i) => `
+        <div class="extra">
+          <input type="text" data-x="titulo" data-i="${i}" placeholder="Nome da tarefa" value="${esc(x.titulo)}">
+          <div class="botoes">${chips("modelo-x-area", Object.entries(AREAS), x.area, `data-i="${i}"`)}</div>
+          <div class="campo-linha">
+            <input type="number" min="0" data-x="dias" data-i="${i}" value="${x.dias}">
+            <select data-x="sentido" data-i="${i}">
+              <option value="antes" ${x.sentido === 'antes' ? 'selected' : ''}>dia(s) antes</option>
+              <option value="depois" ${x.sentido === 'depois' ? 'selected' : ''}>dia(s) depois</option>
+            </select>
+            <select data-x="base" data-i="${i}">
+              <option value="inicio" ${x.base === 'inicio' ? 'selected' : ''}>do início</option>
+              <option value="fim" ${x.base === 'fim' ? 'selected' : ''}>do fim</option>
+            </select>
+          </div>
+          <div class="campo-linha">às <input type="text" class="hora" data-x="hora" data-i="${i}" inputmode="numeric" maxlength="5" placeholder="hh:mm" value="${esc(x.hora)}"> <span class="sub">(hora opcional)</span></div>
+          <textarea rows="3" data-x="etapas" data-i="${i}" placeholder="Etapas, uma por linha (opcional)">${esc(x.etapas)}</textarea>
+          <div class="botoes gerenciar"><button class="link" type="button" data-acao="modelo-x-remover" data-i="${i}">Remover esta tarefa</button></div>
+        </div>`).join('');
+      return `
+        <div class="card editor-modelo">
+          <div class="campo" style="margin-top:0"><span class="rotulo">Nome do modelo</span>
+            <input type="text" data-m="nome" placeholder="Ex.: Viagem de trabalho" value="${esc(m.nome)}"></div>
+          <div class="campo"><span class="rotulo">Tipo do item</span><div class="botoes">${chips('modelo-tipo', Object.entries(TIPOS), m.tipo)}</div></div>
+          <div class="campo"><span class="rotulo">Área</span><div class="botoes">${chips('modelo-area', Object.entries(AREAS), m.area)}</div></div>
+          <div class="campo"><span class="rotulo">Título sugerido</span>
+            <input type="text" data-m="titulo" placeholder="Ex.: Viagem a " value="${esc(m.titulo)}"></div>
+          ${m.tipo === 'compromisso' ? `
+            <div class="campo"><span class="rotulo">Quantos dias costuma durar (opcional)</span>
+              <div class="campo-linha"><input type="number" min="1" data-m="dias" value="${m.dias || ''}"> dias</div></div>` : ''}
+          <div class="campo"><span class="rotulo">Também criar estas tarefas</span>
+            ${extras || '<p class="vazio">Nenhuma tarefa extra.</p>'}
+            <div class="botoes"><button class="btn" type="button" data-acao="modelo-x-novo">+ Adicionar tarefa</button></div>
+          </div>
+          <div class="rodape">
+            <button class="btn" type="button" data-acao="modelo-cancelar">Cancelar</button>
+            <button class="btn principal" type="button" data-acao="modelo-salvar">Salvar modelo</button>
+          </div>
+        </div>`;
+    }
+
+    // Cópia do modelo para editar (etapas viram texto, uma por linha).
+    function copiaParaEditar(m) {
+      return { ...m, dias: m.dias || '', extras: m.extras.map((x) => ({ ...x, hora: x.hora || '', etapas: x.etapas.join('\n') })) };
+    }
+
+    function salvarModelo() {
+      const m = tela.modeloEditando;
+      if (!m.nome.trim()) return 'Dê um nome ao modelo.';
+      const extras = [];
+      for (const x of m.extras) {
+        if (!x.titulo.trim()) continue; // tarefa sem nome é ignorada
+        const hora = x.hora.trim() ? normalizarHora(x.hora) : '';
+        if (hora === null) return `Hora inválida em "${x.titulo}". Digite assim: 20:00.`;
+        extras.push({
+          titulo: x.titulo.trim(), area: x.area, dias: Math.max(0, Number(x.dias) || 0), sentido: x.sentido, base: x.base, hora,
+          etapas: x.etapas.split('\n').map((e) => e.trim()).filter(Boolean),
+        });
+      }
+      const pronto = {
+        id: m.id || `md${Date.now()}`, nome: m.nome.trim(), tipo: m.tipo, area: m.area, titulo: m.titulo,
+        ...(m.tipo === 'compromisso' && Number(m.dias) > 1 ? { dias: Number(m.dias) } : {}),
+        ...(m.duracao ? { duracao: m.duracao } : {}),
+        extras,
+      };
+      const antigo = modelos.find((x) => x.id === m.id);
+      if (antigo) modelos[modelos.indexOf(antigo)] = pronto; else modelos.push(pronto);
+      return null;
+    }
+
     // ============ Aba Histórico (todos os números, por mês) ============
     function renderHistorico() {
       const ano = tela.mesHist.getFullYear();
@@ -1491,7 +1641,7 @@
           <h2>${maiuscula(MESES[mes])} ${ano}${ehMesAtual ? ' <small style="font-weight:400;color:var(--muted)">até hoje</small>' : ''}</h2>
           <button class="btn" type="button" data-acao="hist-mes" data-passo="1" aria-label="Próximo mês">›</button>
         </div>`;
-      if (futuro) return html + '<p class="vazio">Este mês ainda não começou.</p>' + htmlDados();
+      if (futuro) return html + '<p class="vazio">Este mês ainda não começou.</p>';
 
       // Dias que já terminaram (o que se repete) e dias até hoje (metas e registros).
       const diasMes = diasDoMesAteHoje(ano, mes);
@@ -1548,7 +1698,7 @@
           <div class="quando"><span>${fmtDiaLongo(deChave(k))}</span>${htmlPontosEnergia(registros[k].energia)}</div>
           ${registros[k].texto ? `<div>${esc(registros[k].texto)}</div>` : '<div class="vazio" style="padding:0">Sem texto.</div>'}
         </div>`).join('') || '<p class="vazio">Nenhum registro neste mês.</p>'}</div></section>`;
-      return html + htmlDados();
+      return html;
     }
 
     // Próxima vez (a partir de hoje) ou última vez (antes de hoje) em que o item acontece, até 1 ano.
@@ -1775,7 +1925,7 @@
       document.getElementById('filtro-tipo').hidden = !comFiltros;
       document.getElementById('topo').classList.toggle('fixo', comFiltros);
       renderFiltros();
-      const telas = { dia: renderDia, lista: renderLista, encaixar: renderEncaixar, calendario: renderCalendario, historico: renderHistorico };
+      const telas = { dia: renderDia, lista: renderLista, encaixar: renderEncaixar, calendario: renderCalendario, historico: renderHistorico, ajustes: renderAjustes };
       document.getElementById('conteudo').innerHTML = telas[tela.aba]();
       document.querySelectorAll('.aba').forEach((b) => {
         if (b.dataset.aba === tela.aba) b.setAttribute('aria-current', 'page');
@@ -1839,7 +1989,7 @@
     }
 
     const acoesGerais = {
-      'aba': (b) => { tela.aba = b.dataset.aba; tela.aberto = null; window.scrollTo(0, 0); },
+      'aba': (b) => { tela.aba = b.dataset.aba; tela.aberto = null; tela.modeloEditando = null; window.scrollTo(0, 0); },
       'filtro-area': (b) => { tela.area = b.dataset.valor; tela.aberto = null; },
       'filtro-tipo': (b) => { const v = b.dataset.valor; if (tela.tipos.has(v)) tela.tipos.delete(v); else tela.tipos.add(v); tela.aberto = null; },
       'mes': (b) => {
@@ -1914,7 +2064,35 @@
       'plano-editar': () => {
         tela.fluxo = { tipo: 'planejamento', passo: 3, dia: chave(HOJE) };
       },
+      'ajustes-abrir': () => { if (tela.aba !== 'ajustes') tela.abaAnterior = tela.aba; tela.aba = 'ajustes'; tela.aberto = null; window.scrollTo(0, 0); },
+      'ajustes-voltar': () => { tela.aba = tela.abaAnterior || 'dia'; tela.modeloEditando = null; window.scrollTo(0, 0); },
+      'modelo-novo': () => { tela.modeloEditando = { nome: '', tipo: 'compromisso', area: 'pessoal', titulo: '', dias: '', extras: [] }; },
+      'modelo-editar': (b) => { tela.modeloEditando = copiaParaEditar(modelos.find((m) => m.id === b.dataset.id)); },
+      'modelo-excluir': (b) => {
+        const m = modelos.find((x) => x.id === b.dataset.id);
+        if (!confirm(`Excluir o modelo "${m.nome}"? As tarefas já criadas por ele continuam.`)) return;
+        modelos.splice(modelos.indexOf(m), 1);
+        avisar('Modelo excluído.');
+      },
+      'modelo-tipo': (b) => { tela.modeloEditando.tipo = b.dataset.valor; },
+      'modelo-area': (b) => { tela.modeloEditando.area = b.dataset.valor; },
+      'modelo-x-area': (b) => { tela.modeloEditando.extras[Number(b.dataset.i)].area = b.dataset.valor; },
+      'modelo-x-novo': () => {
+        tela.modeloEditando.extras.push({ titulo: '', area: tela.modeloEditando.area, dias: 1, sentido: 'antes', base: 'inicio', hora: '', etapas: '' });
+      },
+      'modelo-x-remover': (b) => { tela.modeloEditando.extras.splice(Number(b.dataset.i), 1); },
+      'modelo-cancelar': () => { tela.modeloEditando = null; },
+      'modelo-salvar': () => {
+        const problema = salvarModelo();
+        if (problema) { avisar(problema); return; }
+        tela.modeloEditando = null;
+        avisar('Modelo salvo.');
+      },
       'meta-nova': () => { tela.novaMeta = { titulo: '', tipo: 'comecar', quantidade: false, alvo: 1, unidade: '' }; },
+      'meta-editar': (b) => {
+        const m = metas.find((x) => x.id === b.dataset.meta);
+        tela.novaMeta = { id: m.id, titulo: m.titulo, tipo: m.tipo, quantidade: porQuantidade(m), alvo: m.alvo ?? 1, unidade: m.unidade || '' };
+      },
       'meta-tipo': (b) => { tela.novaMeta.tipo = b.dataset.valor; },
       'meta-medida': (b) => { tela.novaMeta.quantidade = b.dataset.valor === 'quantidade'; },
       'meta-cancelar': () => { tela.novaMeta = null; },
@@ -1922,15 +2100,16 @@
         const n = tela.novaMeta;
         const titulo = n.titulo.trim();
         if (!titulo) { avisar('Escreva o nome da meta.'); return; }
-        const meta = { id: `m${Date.now()}`, titulo, tipo: n.tipo };
+        const meta = { id: n.id || `m${Date.now()}`, titulo, tipo: n.tipo };
         if (n.quantidade) {
           if (!(Number(n.alvo) >= 0) || String(n.alvo).trim() === '') { avisar('Informe a quantidade da meta.'); return; }
           meta.alvo = Number(n.alvo);
           meta.unidade = n.unidade.trim() || 'vezes';
         }
-        metas.push(meta);
+        const antiga = metas.find((m) => m.id === n.id);
+        if (antiga) metas[metas.indexOf(antiga)] = meta; else metas.push(meta);
         tela.novaMeta = null;
-        avisar('Meta criada.');
+        avisar(antiga ? 'Meta alterada.' : 'Meta criada.');
       },
     };
 
@@ -2035,6 +2214,15 @@
       if (ev.target.id === 'nota-dia') tela.rascunho.texto = ev.target.value;
       if (ev.target.id === 'plano-treino') { planoTreino = ev.target.value; salvar(); }
       if (ev.target.id === 'meta-titulo') tela.novaMeta.titulo = ev.target.value;
+      // Editor de modelos: guarda o que é digitado sem redesenhar a tela.
+      if (tela.modeloEditando && ev.target.dataset.m) tela.modeloEditando[ev.target.dataset.m] = ev.target.value;
+      if (tela.modeloEditando && ev.target.dataset.x) {
+        if (ev.target.dataset.x === 'hora') {
+          const d = ev.target.value.replace(/\D/g, '').slice(0, 4);
+          ev.target.value = d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d;
+        }
+        tela.modeloEditando.extras[Number(ev.target.dataset.i)][ev.target.dataset.x] = ev.target.value;
+      }
       if (ev.target.id === 'meta-alvo') tela.novaMeta.alvo = ev.target.value;
       if (ev.target.id === 'meta-unidade') tela.novaMeta.unidade = ev.target.value;
       if (ev.target.id === 'busca') {
@@ -2044,23 +2232,15 @@
     });
 
     // ============ Cadastro rápido ============
-    const MODELOS = {
-      viagem: {
-        nome: 'Viagem de trabalho', tipo: 'compromisso', area: 'trabalho', titulo: 'Viagem a ', dias: 2,
-        extras: 'Também cria: "Fazer a mala" na véspera, às 20h, com a lista da mala.',
-      },
-      consulta: {
-        nome: 'Consulta', tipo: 'compromisso', area: 'pessoal', titulo: 'Consulta ', duracao: 60,
-        extras: 'Também cria: "Separar documentos e exames" na véspera, às 20h.',
-      },
-    };
+    const modeloDoForm = () => modelos.find((m) => m.id === form.modelo) || null;
 
     const form = { tipo: 'tarefa', area: 'pessoal', dias: new Set(), modelo: null, detalhes: false };
     const $ = (id) => document.getElementById(id);
 
     function renderForm() {
-      $('f-modelo').innerHTML = [['', 'Nenhum'], ...Object.entries(MODELOS).map(([v, m]) => [v, m.nome])].map(([v, nome]) => `
-        <button class="chip opcao" type="button" data-f-modelo="${v}" aria-pressed="${(form.modelo || '') === v}">${nome}</button>`).join('');
+      $('f-campo-modelo').hidden = Boolean(form.editando) || !modelos.length;
+      $('f-modelo').innerHTML = [['', 'Nenhum'], ...modelos.map((m) => [m.id, m.nome])].map(([v, nome]) => `
+        <button class="chip opcao" type="button" data-f-modelo="${v}" aria-pressed="${(form.modelo || '') === v}">${esc(nome)}</button>`).join('');
       $('f-tipo').innerHTML = Object.entries(TIPOS).map(([v, nome]) => `
         <button class="chip opcao" type="button" data-f-tipo="${v}" aria-pressed="${form.tipo === v}">${icone(v)}${nome}</button>`).join('');
       $('f-area').innerHTML = Object.entries(AREAS).map(([v, nome]) => `
@@ -2093,19 +2273,19 @@
       $('f-dias-semana').hidden = rep.value !== 'dias';
       $('f-intervalo').hidden = rep.value !== 'intervalo';
 
-      const m = form.modelo && MODELOS[form.modelo];
-      $('f-modelo-extra').hidden = !m;
-      $('f-modelo-extra').textContent = m ? m.extras : '';
+      const m = modeloDoForm();
+      $('f-modelo-extra').hidden = !m || !m.extras.length;
+      $('f-modelo-extra').textContent = m ? textoExtras(m) : '';
       verificarConflito();
     }
 
     function aplicarModelo(v) {
       form.modelo = v || null;
-      const m = MODELOS[v];
+      const m = modeloDoForm();
       if (!m) return;
       form.tipo = m.tipo;
       form.area = m.area;
-      if (!$('f-titulo').value.trim() || Object.values(MODELOS).some((x) => x.titulo === $('f-titulo').value)) $('f-titulo').value = m.titulo;
+      if (!$('f-titulo').value.trim() || modelos.some((x) => x.titulo === $('f-titulo').value)) $('f-titulo').value = m.titulo || '';
       $('f-dia-todo').checked = Boolean(m.diaTodo);
       $('f-repeticao').value = 'nao';
       if (m.dias) $('f-ate').value = chave(somarDias(deChave($('f-data').value || chave(HOJE)), m.dias - 1));
@@ -2145,7 +2325,6 @@
       $('f-data').value = chave(HOJE);
       $('f-erro').hidden = true;
       $('f-cabecalho').textContent = item ? 'Editar item' : 'Novo item';
-      $('f-campo-modelo').hidden = Boolean(item);
 
       if (item) {
         form.tipo = item.tipo;
@@ -2232,8 +2411,8 @@
       if (md || t || a || d) renderForm();
     });
     $('form-novo').addEventListener('change', (ev) => {
-      if (ev.target.id === 'f-data' && form.modelo && MODELOS[form.modelo].dias) {
-        $('f-ate').value = chave(somarDias(deChave(ev.target.value), MODELOS[form.modelo].dias - 1));
+      if (ev.target.id === 'f-data' && modeloDoForm()?.dias) {
+        $('f-ate').value = chave(somarDias(deChave(ev.target.value), modeloDoForm().dias - 1));
       }
       renderForm();
     });
@@ -2339,24 +2518,26 @@
       }
       itens.push(item);
 
-      // Itens extras criados pelos modelos
-      if (form.modelo && item.data) {
-        const vespera = chave(somarDias(deChave(item.data), -1));
-        if (form.modelo === 'viagem') {
-          itens.push({ id: novoId(), titulo: 'Fazer a mala', tipo: 'tarefa', area: 'pessoal', data: vespera, hora: '20:00', duracao: 30,
-            etapas: ['Roupas', 'Carregadores', 'Documentos e cartão de embarque', 'Remédios'].map((texto) => ({ texto, feita: false })) });
-        }
-        if (form.modelo === 'consulta') {
-          itens.push({ id: novoId(), titulo: 'Separar documentos e exames', tipo: 'tarefa', area: 'pessoal', data: vespera, hora: '20:00', duracao: 15 });
+      // Tarefas que o modelo cria junto, com o dia contado a partir do início ou do fim do item.
+      const modelo = modeloDoForm();
+      if (modelo && item.data) {
+        for (const x of modelo.extras) {
+          const base = deChave(x.base === 'fim' ? item.ate || item.data : item.data);
+          const dia = somarDias(base, x.sentido === 'antes' ? -x.dias : x.dias);
+          itens.push({
+            id: novoId(), titulo: x.titulo, tipo: 'tarefa', area: x.area, data: chave(dia),
+            ...(x.hora ? { hora: x.hora } : {}),
+            ...(x.etapas.length ? { etapas: x.etapas.map((texto) => ({ texto, feita: false })) } : {}),
+          });
         }
       }
 
       fecharForm();
-      if (item.tipo === 'tarefa' && !item.data) {
+      if (item.tipo === 'tarefa' && !item.data && !item.regra) {
         tela.aba = 'encaixar';
         avisar('Salvo em "A encaixar".');
       } else {
-        avisar(form.modelo ? 'Salvo, junto com as tarefas do modelo.' : 'Salvo.');
+        avisar(modelo?.extras.length ? 'Salvo, junto com as tarefas do modelo.' : 'Salvo.');
       }
       render();
     });
