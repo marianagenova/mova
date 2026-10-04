@@ -102,7 +102,7 @@ Cada informação aparece em um lugar só:
 
 | Aba | Para que serve |
 |---|---|
-| Dia | Fazer o dia de hoje: agora, passo a passo, metas, linha do tempo e fechar o dia |
+| Dia | Fazer o dia de hoje: agora (com o que já passou sem marcação), metas, linha do tempo e fechar o dia |
 | Lista | Os próximos dias: para resolver, prazos chegando e os próximos 7 dias |
 | A encaixar | Tarefas sem dia para fazer |
 | Calendário | O mês e o que aconteceu em cada dia |
@@ -144,13 +144,12 @@ Coisas que não têm horário e não são hábitos, marcadas uma vez por dia:
 São marcadas na visão do dia ou no fechamento do dia, e é possível criar metas novas. O compilado (dias cumpridos, não cumpridos e sem marcar) fica no Histórico, por mês, e na semana do planejamento de domingo. Na primeira semana de cada mês, a visão do dia avisa que o compilado do mês anterior está pronto, com um botão que leva até ele.
 
 ### 4.10 Visão do dia
-- **Agora:** o que está acontecendo, até que horas, o que vem a seguir e em quanto tempo.
+- **Agora:** a atividade do momento (que dá para marcar ali mesmo), o que vem a seguir e em quanto tempo, e a lista "Já passou o horário · falta marcar" com os itens de hoje cujo horário terminou sem marcação.
 - **Linha do tempo:** os itens desenhados nas horas do dia, mostrando os espaços livres. Itens que se sobrepõem ficam destacados, com um aviso. Tocar num bloco abre o item numa janela, com os detalhes e os botões de ação.
 - **Duração e carga do dia:** cada item tem uma duração estimada (com um padrão por tipo). O dia mostra o total planejado e aparece como "pesado" acima de 6 horas.
 
-### 4.11 Etapas e passo a passo do dia
+### 4.11 Etapas
 - **Etapas dentro de uma tarefa:** uma tarefa pode ser dividida em etapas, e o app destaca a próxima. Quando todas são marcadas, a tarefa é concluída.
-- **Passo a passo do dia:** todos os itens do dia com horário formam uma sequência, feita um passo de cada vez (feito, versão mínima, não fazer ou pular por agora). Não há separação entre manhã e tarde: o que importa é o dia.
 
 ### 4.12 Versão mínima e plano B
 - **Versão mínima:** um hábito, treino ou estudo pode ter uma versão para dia ruim (ex.: "10 minutos de leitura"). Ela conta como feita, mas aparece separada no histórico.

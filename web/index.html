@@ -184,7 +184,7 @@
     .bloco.feito { opacity: 0.55; }
     .bloco.feito strong { text-decoration: line-through; }
 
-    /* Fluxos (rotina, fechamento, planejamento) */
+    /* Fluxos (item, fechamento, planejamento) */
     .passos-topo { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 0.875rem; }
     .progresso { display: flex; gap: 4px; margin: 8px 0 14px; }
     .progresso i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
@@ -197,10 +197,6 @@
     .energia button[aria-pressed="true"] { background: var(--pessoal); border-color: var(--pessoal); color: #fff; }
     .energia button[aria-pressed="true"] span { color: #fff; }
     textarea.nota { width: 100%; min-height: 96px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; resize: vertical; }
-    .lista-passos { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 4px; font-size: 0.875rem; }
-    .lista-passos li { display: flex; gap: 8px; color: var(--muted); }
-    .lista-passos li.atual { color: var(--ink); font-weight: 700; }
-    .lista-passos li.ok { text-decoration: line-through; }
 
     .barras-dias { display: grid; gap: 8px; }
     .barra-dia { display: grid; grid-template-columns: 64px 1fr 56px; gap: 8px; align-items: center; font-size: 0.875rem; }
@@ -398,7 +394,7 @@
   <div class="aviso-salvo" id="aviso-salvo" hidden></div>
   <input type="file" id="arquivo-importar" accept="application/json,.json" hidden>
 
-  <!-- Fluxos guiados: rotina passo a passo, fechamento do dia, planejamento da semana -->
+  <!-- Janelas: item da linha do tempo, fechamento do dia, planejamento da semana -->
   <div class="fundo" id="fundo-fluxo" hidden>
     <div class="folha cheia" id="fluxo"></div>
   </div>
@@ -782,7 +778,7 @@
       mesHist: new Date(HOJE.getFullYear(), HOJE.getMonth(), 1),
       mes: new Date(HOJE.getFullYear(), HOJE.getMonth(), 1),
       diaSelecionado: chave(HOJE),
-      fluxo: null,        // { tipo: 'rotina' | 'fechamento' | 'planejamento', passo, dia, pulados }
+      fluxo: null,        // { tipo: 'item' | 'fechamento' | 'planejamento', passo, dia, id }
       rascunho: { energia: null, texto: '' },
       novaMeta: null,     // { titulo, tipo } enquanto cria uma meta
       busca: '',
@@ -1064,11 +1060,6 @@
     }
 
     // ============ Aba Dia ============
-    // Passo a passo do dia: todos os itens com horário, em ordem.
-    function passosDoDia(d) {
-      return itensDoDia(d, false).filter((i) => i.hora && !i.diaTodo);
-    }
-
     function minutosAgora() { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
 
     // Atividade do momento, o que vem a seguir e o que já passou sem marcação,
@@ -1166,22 +1157,6 @@
       if (!ehHoje) html += '<div class="botoes" style="justify-content:center;margin-top:8px"><button class="btn" type="button" data-acao="dia-hoje">Voltar para hoje</button></div>';
 
       if (ehHoje) html += htmlAgora();
-
-      const rotina = passosDoDia(d);
-      if (rotina.length >= 2) {
-        const feitos = rotina.filter((i) => estadoDe(i, d)).length;
-        const ultimo = rotina[rotina.length - 1];
-        html += `
-          <div class="card">
-            <h3>Passo a passo do dia</h3>
-            <p><strong>${rotina.length} passos</strong> · ${fmtHora(rotina[0].hora)} às ${fmtMin(minutos(ultimo.hora) + duracaoDe(ultimo))}</p>
-            <p class="sub">${rotina.map((i) => esc(i.titulo)).join(' → ')}</p>
-            <div class="botoes">${feitos === rotina.length
-              ? '<span class="sub">Todos os passos do dia decididos.</span>'
-              : `<button class="btn principal" type="button" data-acao="fluxo-abrir" data-fluxo="rotina">${feitos ? `Continuar (${feitos} de ${rotina.length} feitos)` : 'Fazer passo a passo'}</button>`}
-            </div>
-          </div>`;
-      }
 
       html += `<div class="card"><h3>Metas do dia</h3>${htmlMetasDoDia(d)}</div>`;
 
@@ -1537,7 +1512,7 @@
       if (!f) { document.getElementById('fundo-fluxo').hidden = true; return; }
       document.getElementById('fundo-fluxo').hidden = false;
       const rolagem = el.querySelector('.miolo')?.scrollTop || 0;
-      const fluxos = { item: fluxoItem, rotina: fluxoRotina, fechamento: fluxoFechamento, planejamento: fluxoPlanejamento };
+      const fluxos = { item: fluxoItem, fechamento: fluxoFechamento, planejamento: fluxoPlanejamento };
       el.innerHTML = fluxos[f.tipo](f);
       el.classList.toggle('cheia', f.tipo !== 'item');
       const miolo = el.querySelector('.miolo');
@@ -1551,30 +1526,6 @@
       return `
         <div class="passos-topo"><span>${fmtDiaLongo(d)}</span><button class="btn" type="button" data-acao="fluxo-fechar">Fechar</button></div>
         <ul class="itens" style="margin-top:12px">${htmlItem(item, d, 'dia', true)}</ul>`;
-    }
-
-    function fluxoRotina(f) {
-      const d = deChave(f.dia);
-      const passos = passosDoDia(d);
-      const atual = passos.find((i) => !estadoDe(i, d) && !f.pulados.has(i.id));
-      const idx = atual ? passos.indexOf(atual) : passos.length;
-      if (atual) { tela.aberto = `${atual.id}|${f.dia}`; }
-      const lista = passos.map((i, n) => {
-        const e = estadoDe(i, d);
-        return `<li class="${i === atual ? 'atual' : ''} ${e ? 'ok' : ''}"><span>${fmtHora(i.hora)}</span><span>${esc(i.titulo)}${e ? ' · ' + textoEstado(e).toLowerCase() : f.pulados.has(i.id) ? ' · pulado' : ''}</span></li>`;
-      }).join('');
-      return `
-        <div class="passos-topo"><span>Passo a passo · ${fmtDiaCurto(d)}</span><button class="btn" type="button" data-acao="fluxo-fechar">Fechar</button></div>
-        ${htmlProgresso(idx - 1, passos.length)}
-        <div class="miolo">
-          ${atual ? `
-            <h2>Passo ${idx + 1} de ${passos.length}<small>${fmtHora(atual.hora)} · ${fmtDur(duracaoDe(atual))}</small></h2>
-            <ul class="itens">${htmlItem(atual, d, 'dia', true)}</ul>
-            <div class="botoes" style="margin-top:10px"><button class="btn" type="button" data-acao="rotina-pular" data-id="${atual.id}">Pular por agora</button></div>
-          ` : `<h2>Dia terminado<small>${passos.filter((i) => estadoDe(i, d)?.estado === 'feito').length} de ${passos.length} feitos.</small></h2>
-               ${f.pulados.size ? '<div class="botoes"><button class="btn" type="button" data-acao="rotina-rever">Voltar aos pulados</button></div>' : ''}`}
-          <ul class="lista-passos">${lista}</ul>
-        </div>`;
     }
 
     function fluxoFechamento(f) {
@@ -1794,7 +1745,7 @@
       'ver-mes-hist': () => { tela.aba = 'historico'; tela.mesHist = new Date(tela.mes); window.scrollTo(0, 0); },
       'fluxo-abrir': (b) => {
         const tipo = b.dataset.fluxo;
-        tela.fluxo = { tipo, passo: 0, dia: tipo === 'rotina' ? tela.dia : chave(HOJE), pulados: new Set() };
+        tela.fluxo = { tipo, passo: 0, dia: chave(HOJE) };
         tela.aberto = null;
         tela.painel = 'acoes';
         const r = registros[chave(HOJE)];
@@ -1803,8 +1754,6 @@
       'fluxo-fechar': () => { tela.fluxo = null; tela.aberto = null; },
       'fluxo-prox': () => { tela.fluxo.passo++; tela.aberto = null; },
       'fluxo-voltar': () => { tela.fluxo.passo--; tela.aberto = null; },
-      'rotina-pular': (b) => { tela.fluxo.pulados.add(b.dataset.id); tela.painel = 'acoes'; },
-      'rotina-rever': () => { tela.fluxo.pulados.clear(); },
       'energia': (b) => { tela.rascunho.energia = Number(b.dataset.valor); },
       'fechamento-salvar': () => {
         if (!tela.rascunho.energia) { avisar('Escolha a energia do dia (1 a 5).'); return; }
@@ -1839,7 +1788,7 @@
         location.reload();
       },
       'plano-editar': () => {
-        tela.fluxo = { tipo: 'planejamento', passo: 3, dia: chave(HOJE), pulados: new Set() };
+        tela.fluxo = { tipo: 'planejamento', passo: 3, dia: chave(HOJE) };
       },
       'meta-nova': () => { tela.novaMeta = { titulo: '', tipo: 'comecar', quantidade: false, alvo: 1, unidade: '' }; },
       'meta-tipo': (b) => { tela.novaMeta.tipo = b.dataset.valor; },
@@ -1879,12 +1828,12 @@
       const d = li.dataset.dia ? deChave(li.dataset.dia) : null;
       const k = chaveOcorrencia(item, d);
       const idAberto = `${item.id}|${li.dataset.dia}`;
-      // Na rotina e na janela de um item, o painel fica sempre aberto.
-      const naRotina = tela.fluxo && (tela.fluxo.tipo === 'rotina' || tela.fluxo.tipo === 'item');
+      // Na janela de um item, o painel fica sempre aberto.
+      const naJanela = tela.fluxo && tela.fluxo.tipo === 'item';
 
       switch (acao) {
         case 'abrir':
-          if (naRotina) return;
+          if (naJanela) return;
           tela.aberto = tela.aberto === idAberto ? null : idAberto;
           tela.painel = 'acoes';
           tela.motivo = null;
