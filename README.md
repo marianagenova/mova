@@ -61,4 +61,6 @@ Cada fase já deve ser usável sozinha.
 
 ## Como rodar
 
-A definir na fase 0.
+O app fica em [web/](web/) e é HTML, CSS e JS puros, sem etapa de build. A cada push na `main`, ele é publicado no GitHub Pages pelo workflow [.github/workflows/pages.yml](.github/workflows/pages.yml).
+
+A configuração do Supabase, das chaves de notificação e do teste no celular está em [docs/fase-0.md](docs/fase-0.md).
