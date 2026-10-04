@@ -6,6 +6,7 @@
   <title>Mova</title>
   <meta name="theme-color" content="#2e7d6b">
   <link rel="manifest" href="manifest.webmanifest">
+  <script src="config.js"></script>
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <style>
@@ -47,6 +48,17 @@
 
     .wrap { max-width: 520px; margin: 0 auto; padding-inline: 16px; }
 
+
+    .tela-login {
+      position: fixed; inset: 0; z-index: 60; background: var(--bg);
+      display: grid; place-items: center; padding: 16px;
+    }
+    .login-caixa { width: 100%; max-width: 360px; display: grid; gap: 12px; }
+    .login-caixa h1 { margin: 0; color: var(--pessoal); font-size: 2rem; }
+    .login-caixa .sub { margin: 0; color: var(--muted); }
+    .login-caixa input { padding: 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 1rem; background: var(--card); }
+    .login-caixa .btn { padding: 12px; font-size: 1rem; --cor: var(--pessoal); }
+    .login-caixa .msg { margin: 0; }
 
     header.topo .wrap { position: relative; }
     .engrenagem {
@@ -423,6 +435,18 @@
     </div>
   </nav>
 
+  <!-- Entrada na conta (fase 1): só a dona do app tem usuário -->
+  <div class="tela-login" id="tela-login" hidden>
+    <form class="login-caixa" id="form-login" novalidate>
+      <h1>Mova</h1>
+      <p class="sub">Entre para seus dados ficarem iguais no celular e no notebook.</p>
+      <input type="email" id="login-email" autocomplete="username" placeholder="E-mail" required>
+      <input type="password" id="login-senha" autocomplete="current-password" placeholder="Senha" required>
+      <p class="msg erro" id="login-erro" hidden></p>
+      <button class="btn principal" type="submit">Entrar</button>
+    </form>
+  </div>
+
   <div class="aviso-salvo" id="aviso-salvo" hidden></div>
   <input type="file" id="arquivo-importar" accept="application/json,.json" hidden>
 
@@ -697,16 +721,22 @@
 
     let falhouAoSalvar = false;
     let recarregando = false; // depois de apagar ou importar, não grava os dados antigos de volta
+    let ultimoSalvo = JSON.stringify(dados);
+    // Guarda no aparelho e, se algo mudou, agenda o envio para o servidor.
     function salvar() {
       if (recarregando) return;
       dados.planoTreino = planoTreino;
+      const texto = JSON.stringify(dados);
+      if (texto === ultimoSalvo) return;
+      ultimoSalvo = texto;
       try {
-        localStorage.setItem(CHAVE_DADOS, JSON.stringify(dados));
+        localStorage.setItem(CHAVE_DADOS, texto);
         falhouAoSalvar = false;
       } catch (erro) {
         if (!falhouAoSalvar) avisar('Não foi possível salvar neste aparelho.');
         falhouAoSalvar = true;
       }
+      marcarPendente();
     }
 
     // Metas do dia: coisas sem horário, marcadas uma vez por dia.
@@ -1516,9 +1546,11 @@
       try {
         const novos = JSON.parse(await arquivo.text());
         if (!Array.isArray(novos.itens) || !Array.isArray(novos.metas)) throw new Error('formato');
-        if (!confirm('Substituir todos os dados deste aparelho pelos do arquivo?')) return;
+        if (!confirm('Substituir todos os dados pelos do arquivo? Isso vale também para o servidor e o outro aparelho.')) return;
         recarregando = true;
         localStorage.setItem(CHAVE_DADOS, JSON.stringify(novos));
+        sync.pendente = true; // envia ao servidor depois de recarregar
+        gravarSync();
         location.reload();
       } catch {
         avisar('Esse arquivo não é um backup do Mova.');
@@ -1527,10 +1559,22 @@
 
     function htmlDados() {
       const backup = dados.ultimoBackup ? fmtDiaLongo(deChave(dados.ultimoBackup)) : 'nunca';
+      const quando = sync.sincronizadoEm ? new Date(sync.sincronizadoEm) : null;
+      const estadoSync = !sessao ? 'Nenhuma conta conectada.'
+        : sync.pendente ? 'Há alterações esperando internet para ir ao servidor.'
+        : quando ? `Tudo salvo no servidor (${rotuloDia(inicioDoDia(quando))}, ${fmtMin(quando.getHours() * 60 + quando.getMinutes())}).`
+        : 'Conectando ao servidor…';
       return `
+        <section class="secao"><h2><span>Conta</span></h2>
+          <div class="card" style="margin-top:0">
+            <p>${sessao ? esc(sessao.email) : ''}</p>
+            <p class="sub" style="margin-top:4px">${estadoSync}</p>
+            ${sessao ? '<div class="botoes gerenciar"><button class="link" type="button" data-acao="sair">Sair da conta</button></div>' : ''}
+          </div>
+        </section>
         <section class="secao"><h2><span>Seus dados</span></h2>
           <div class="card" style="margin-top:0">
-            <p class="sub">Nesta versão de teste, os dados ficam salvos só neste aparelho. Exporte de vez em quando para não perder nada.</p>
+            <p class="sub">Os dados ficam no servidor e numa cópia neste aparelho. O backup é um arquivo extra, por segurança.</p>
             <p class="sub" style="margin-top:6px">Último backup: <strong>${backup}</strong></p>
             <div class="botoes">
               <button class="btn principal" type="button" data-acao="exportar">Exportar backup</button>
@@ -2122,12 +2166,18 @@
         if (!metas.length) tela.editarMetas = false;
         avisar('Meta excluída.');
       },
+      'sair': () => {
+        if (!confirm('Sair da conta neste aparelho? Seus dados continuam no servidor.')) return;
+        sairDaConta();
+      },
       'exportar': () => exportar(),
       'importar': () => document.getElementById('arquivo-importar').click(),
       'apagar-tudo': () => {
-        if (!confirm('Apagar todos os dados deste aparelho e começar de novo com a rotina inicial? Exporte antes se quiser guardar.')) return;
+        if (!confirm('Apagar todos os dados e começar de novo com a rotina inicial? Isso vale também para o servidor e o outro aparelho. Exporte antes se quiser guardar.')) return;
         recarregando = true;
-        localStorage.removeItem(CHAVE_DADOS);
+        localStorage.setItem(CHAVE_DADOS, JSON.stringify(dadosIniciais()));
+        sync.pendente = true; // envia ao servidor depois de recarregar
+        gravarSync();
         location.reload();
       },
       'plano-editar': () => {
@@ -2692,10 +2742,241 @@
       if (tela.aba === 'dia' && !ocupado && document.visibilityState === 'visible') render();
     }, 60000);
 
+    // ============ Conta e sincronização com o servidor (Supabase) ============
+    // Os dados ficam numa linha da tabela dados_app (um documento JSON por conta).
+    // Cada gravação sobe a "versao"; o app só grava se a versão dele ainda for a do
+    // servidor. Se outro aparelho salvou antes, o app pega a versão do servidor.
+    const SUPA = window.MOVA_CONFIG || {};
+    const CHAVE_SESSAO = 'mova.sessao';
+    const CHAVE_SYNC = 'mova.sync';
+    const lerJSON = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+    const gravarJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sem espaço */ } };
+
+    let sessao = lerJSON(CHAVE_SESSAO); // { access_token, refresh_token, expires_at, userId, email }
+    // userId: de quem é a cópia local; versao: última versão do servidor que este aparelho conhece;
+    // pendente: há mudanças locais que ainda não foram para o servidor.
+    let sync = lerJSON(CHAVE_SYNC) || { userId: null, versao: 0, pendente: false, sincronizadoEm: null };
+    const gravarSync = () => gravarJSON(CHAVE_SYNC, sync);
+
+    let timerEnvio;
+    function marcarPendente() {
+      sync.pendente = true;
+      gravarSync();
+      clearTimeout(timerEnvio);
+      if (sessao) timerEnvio = setTimeout(enviar, 1500);
+    }
+
+    function guardarSessao(s) {
+      sessao = {
+        access_token: s.access_token,
+        refresh_token: s.refresh_token,
+        expires_at: s.expires_at || Math.floor(Date.now() / 1000) + s.expires_in,
+        userId: s.user.id,
+        email: s.user.email,
+      };
+      gravarJSON(CHAVE_SESSAO, sessao);
+    }
+
+    async function renovarSessao() {
+      const resp = await fetch(`${SUPA.supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { apikey: SUPA.supabaseAnonKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: sessao.refresh_token }),
+      });
+      if (!resp.ok) {
+        sairDaConta('Sua sessão expirou. Entre de novo.');
+        throw new Error('sessão expirada');
+      }
+      guardarSessao(await resp.json());
+    }
+
+    async function api(caminho, opcoes = {}, podeRenovar = true) {
+      if (sessao.expires_at && Date.now() / 1000 > sessao.expires_at - 60) await renovarSessao();
+      const resp = await fetch(`${SUPA.supabaseUrl}${caminho}`, {
+        ...opcoes,
+        headers: {
+          apikey: SUPA.supabaseAnonKey,
+          Authorization: `Bearer ${sessao.access_token}`,
+          'Content-Type': 'application/json',
+          ...(opcoes.headers || {}),
+        },
+      });
+      if (resp.status === 401 && podeRenovar) {
+        await renovarSessao();
+        return api(caminho, opcoes, false);
+      }
+      if (!resp.ok) throw new Error(`O servidor respondeu ${resp.status}: ${await resp.text()}`);
+      const texto = await resp.text();
+      return texto ? JSON.parse(texto) : null;
+    }
+
+    async function buscarRemoto(campos = 'dados,versao') {
+      const linhas = await api(`/rest/v1/dados_app?select=${campos}&user_id=eq.${sessao.userId}`);
+      return linhas[0] || null;
+    }
+
+    // Troca os dados deste aparelho pelos do servidor e recarrega o app.
+    function substituirPeloRemoto(remoto, mensagem) {
+      recarregando = true;
+      localStorage.setItem(CHAVE_DADOS, JSON.stringify(remoto.dados));
+      sync = { userId: sessao.userId, versao: remoto.versao, pendente: false, sincronizadoEm: new Date().toISOString() };
+      gravarSync();
+      try { sessionStorage.setItem('mova.avisoAoAbrir', mensagem); } catch { /* sem aviso */ }
+      location.reload();
+    }
+
+    // Antes de perder mudanças locais, guarda uma cópia delas no aparelho.
+    function guardarCopiaLocal(motivo) {
+      gravarJSON(`mova.dados.copia-${motivo}`, { em: new Date().toISOString(), dados });
+    }
+
+    // Registra a versão do servidor e se ainda há algo diferente do que foi enviado.
+    function marcarSincronizado(versao, textoEnviado) {
+      ultimoEnviado = textoEnviado;
+      sync = { userId: sessao.userId, versao, pendente: JSON.stringify(dados) !== ultimoEnviado, sincronizadoEm: new Date().toISOString() };
+      gravarSync();
+    }
+
+    let ultimoEnviado = null;
+    let enviando = false;
+    async function enviar() {
+      if (!sessao || enviando || recarregando || sync.userId !== sessao.userId) return;
+      enviando = true;
+      try {
+        const texto = JSON.stringify(dados);
+        const nova = sync.versao + 1;
+        const linhas = await api(`/rest/v1/dados_app?user_id=eq.${sessao.userId}&versao=eq.${sync.versao}`, {
+          method: 'PATCH',
+          headers: { Prefer: 'return=representation' },
+          body: `{"dados":${texto},"versao":${nova},"atualizado_em":"${new Date().toISOString()}"}`,
+        });
+        if (!linhas.length) {
+          // Outro aparelho salvou antes: vale o que está no servidor.
+          guardarCopiaLocal('conflito');
+          substituirPeloRemoto(await buscarRemoto(), 'Os dados tinham mudado no outro aparelho. Agora está tudo igual ao servidor.');
+          return;
+        }
+        marcarSincronizado(nova, texto);
+        if (sync.pendente) timerEnvio = setTimeout(enviar, 500); // mudou algo enquanto enviava
+      } catch (erro) {
+        console.warn('Envio adiado', erro); // sem internet: tenta de novo depois
+      } finally {
+        enviando = false;
+      }
+    }
+
+    // Ao entrar ou abrir o app: alinha este aparelho com o servidor.
+    async function sincronizar() {
+      const remoto = await buscarRemoto();
+      if (!remoto) {
+        const enviarAqui = confirm('Ainda não há dados no servidor. Enviar os dados deste aparelho?\n\n'
+          + 'Faça isso pelo aparelho que você mais usa (o celular). Se escolher "Cancelar", você sai da conta.');
+        if (!enviarAqui) { sairDaConta(); return; }
+        const texto = JSON.stringify(dados);
+        await api('/rest/v1/dados_app', {
+          method: 'POST',
+          headers: { Prefer: 'return=minimal' },
+          body: `{"user_id":"${sessao.userId}","dados":${texto},"versao":1}`,
+        });
+        marcarSincronizado(1, texto);
+        avisar('Dados enviados ao servidor.');
+        render();
+        return;
+      }
+      if (sync.userId !== sessao.userId) {
+        // Primeira vez nesta conta neste aparelho: vale o servidor, e a cópia antiga fica guardada.
+        guardarCopiaLocal('antes-do-login');
+        substituirPeloRemoto(remoto, 'Dados carregados do servidor.');
+        return;
+      }
+      if (remoto.versao > sync.versao) {
+        if (sync.pendente) guardarCopiaLocal('conflito');
+        substituirPeloRemoto(remoto, 'Atualizado com as mudanças do outro aparelho.');
+        return;
+      }
+      if (remoto.versao < sync.versao) sync.versao = remoto.versao; // o servidor foi refeito
+      if (sync.pendente) await enviar();
+      else marcarSincronizado(remoto.versao, JSON.stringify(dados));
+      render();
+    }
+
+    // Ao voltar para o app, confere se o outro aparelho mudou algo (no máximo a cada 30 s).
+    let ultimaConferencia = 0;
+    async function conferirServidor() {
+      if (!sessao || recarregando || Date.now() - ultimaConferencia < 30000) return;
+      ultimaConferencia = Date.now();
+      try {
+        if (sync.pendente) { await enviar(); return; }
+        const remoto = await buscarRemoto('versao');
+        if (remoto && remoto.versao > sync.versao) {
+          substituirPeloRemoto(await buscarRemoto(), 'Atualizado com as mudanças do outro aparelho.');
+        }
+      } catch (erro) {
+        console.warn('Conferência adiada', erro);
+      }
+    }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') conferirServidor(); });
+    window.addEventListener('online', () => { ultimaConferencia = 0; conferirServidor(); });
+
+    async function sairDaConta(mensagem = '') {
+      const antiga = sessao;
+      sessao = null;
+      try { localStorage.removeItem(CHAVE_SESSAO); } catch { /* nada */ }
+      mostrarLogin(mensagem);
+      if (antiga) {
+        fetch(`${SUPA.supabaseUrl}/auth/v1/logout`, {
+          method: 'POST', headers: { apikey: SUPA.supabaseAnonKey, Authorization: `Bearer ${antiga.access_token}` },
+        }).catch(() => {});
+      }
+    }
+
+    function mostrarLogin(mensagem = '') {
+      $('tela-login').hidden = false;
+      $('login-erro').hidden = !mensagem;
+      $('login-erro').textContent = mensagem;
+    }
+
+    $('form-login').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const botao = ev.target.querySelector('button');
+      botao.disabled = true;
+      $('login-erro').hidden = true;
+      try {
+        const resp = await fetch(`${SUPA.supabaseUrl}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: { apikey: SUPA.supabaseAnonKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: $('login-email').value.trim(), password: $('login-senha').value }),
+        });
+        if (!resp.ok) {
+          mostrarLogin(resp.status === 400 ? 'E-mail ou senha incorretos.' : `Não foi possível entrar (erro ${resp.status}).`);
+          return;
+        }
+        guardarSessao(await resp.json());
+        $('tela-login').hidden = true;
+        $('login-senha').value = '';
+        await sincronizar();
+      } catch (erro) {
+        mostrarLogin('Não foi possível conectar. Confira a internet e tente de novo.');
+      } finally {
+        botao.disabled = false;
+      }
+    });
+
     // O service worker permite instalar o app e receber notificações.
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
     render();
+    iniciarConta();
+
+    function iniciarConta() {
+      try {
+        const aviso = sessionStorage.getItem('mova.avisoAoAbrir');
+        if (aviso) { sessionStorage.removeItem('mova.avisoAoAbrir'); avisar(aviso); }
+      } catch { /* sem aviso */ }
+      if (!SUPA.supabaseUrl) return;
+      if (!sessao) { mostrarLogin(); return; }
+      sincronizar().catch((erro) => console.warn('Sincronização adiada', erro));
+    }
   </script>
 </body>
 </html>

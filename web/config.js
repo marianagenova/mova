@@ -1,6 +1,7 @@
 // Valores públicos: podem ficar no repositório.
+// Script comum (não módulo), para o app e a tela de teste lerem em window.MOVA_CONFIG.
 // A chave privada VAPID NUNCA entra aqui; ela fica só nos secrets do Supabase.
-export const config = {
+window.MOVA_CONFIG = {
   // Supabase > Project Settings > API
   supabaseUrl: 'https://kocdeaukwsydyzwnofof.supabase.co',
   supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvY2RlYXVrd3N5ZHl6d25vZm9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExMjMzNzIsImV4cCI6MjEwNjY5OTM3Mn0.P82DgPuJPcZgVoCUM1hNM7BxHFzbGIg5cfs5ZoF1liA',

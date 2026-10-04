@@ -1,4 +1,4 @@
-import { config } from '../config.js';
+const config = window.MOVA_CONFIG; // definido em ../config.js
 
 const $ = (id) => document.getElementById(id);
 
