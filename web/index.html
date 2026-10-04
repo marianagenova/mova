@@ -2223,6 +2223,29 @@
       if (document.visibilityState === 'visible' && chave(new Date()) !== chave(HOJE)) location.reload();
     });
 
+    // Na aba Dia, deslizar o dedo troca de dia: para a esquerda, o dia seguinte;
+    // para a direita, o dia anterior.
+    let toqueInicio = null;
+    $('conteudo').addEventListener('touchstart', (ev) => {
+      // Não troca de dia ao rolar listas de botões nem ao mexer em campos.
+      const ignorar = ev.target.closest('input, textarea, select, .chips, .numeros-meta');
+      toqueInicio = tela.aba === 'dia' && !ignorar && ev.touches.length === 1
+        ? { x: ev.touches[0].clientX, y: ev.touches[0].clientY }
+        : null;
+    }, { passive: true });
+    $('conteudo').addEventListener('touchend', (ev) => {
+      if (!toqueInicio) return;
+      const dx = ev.changedTouches[0].clientX - toqueInicio.x;
+      const dy = ev.changedTouches[0].clientY - toqueInicio.y;
+      toqueInicio = null;
+      // Só conta como deslize se for longo e mais horizontal do que vertical.
+      if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      tela.dia = chave(somarDias(deChave(tela.dia), dx < 0 ? 1 : -1));
+      tela.aberto = null;
+      render();
+      window.scrollTo(0, 0);
+    }, { passive: true });
+
     // Com o app aberto na aba Dia, atualiza o "Agora" a cada minuto
     // (só quando nada está aberto, para não atrapalhar o que você está fazendo).
     setInterval(() => {

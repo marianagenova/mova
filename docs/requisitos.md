@@ -146,6 +146,7 @@ Coisas que não têm horário e não são hábitos, marcadas uma vez por dia:
 São marcadas na visão do dia ou no fechamento do dia, e é possível criar metas novas. O compilado (dias cumpridos, não cumpridos e sem marcar) fica no Histórico, por mês, e na semana do planejamento de domingo. Na primeira semana de cada mês, a visão do dia avisa que o compilado do mês anterior está pronto, com um botão que leva até ele.
 
 ### 4.10 Visão do dia
+- **Trocar de dia:** setas ‹ › ou deslizar o dedo (para a esquerda, o dia seguinte; para a direita, o dia anterior).
 - **Agora:** a atividade do momento (que dá para marcar ali mesmo), o que vem a seguir e em quanto tempo, e a lista "Já passou o horário · falta marcar" com os itens de hoje cujo horário terminou sem marcação.
 - **Linha do tempo:** os itens desenhados nas horas do dia, mostrando os espaços livres. Itens que se sobrepõem ficam destacados, com um aviso. Tocar num bloco abre o item numa janela, com os detalhes e os botões de ação.
 - **Duração e carga do dia:** cada item tem uma duração estimada (com um padrão por tipo). O dia mostra o total planejado e aparece como "pesado" acima de 6 horas.
