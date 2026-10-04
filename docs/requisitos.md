@@ -121,6 +121,13 @@ O dia é fechado à noite, em dois passos:
 
 O registro aparece no calendário (no dia escolhido) e no histórico (diário e gráfico de energia).
 
+### 4.9.1 Metas do dia
+Coisas que não têm horário e não são hábitos, marcadas uma vez por dia:
+- **Parar** (ex.: comer doces): "Evitei" ou "Não evitei".
+- **Começar** (ex.: comer salada, comer frutas): "Fiz" ou "Não fiz".
+
+Aparecem na visão do dia e no fechamento do dia, e é possível criar metas novas. O compilado (dias cumpridos, não cumpridos e sem marcar) aparece no resumo do mês, no histórico (últimos 30 dias), no planejamento da semana e, na primeira semana de cada mês, como "Compilado do mês anterior" na visão do dia.
+
 ### 4.10 Visão do dia
 - **Agora:** o que está acontecendo, até que horas, o que vem a seguir e em quanto tempo.
 - **Linha do tempo:** os itens desenhados nas horas do dia, mostrando os espaços livres. Itens que se sobrepõem ficam destacados, com um aviso. Também há o modo lista.
@@ -209,4 +216,4 @@ Exemplo de repetição com horário fixo: sobrancelha, todo sábado às 15h.
 
 Cada fase já deve ser usável sozinha, para ajustar o rumo com base no uso real.
 
-**[em aberto]** As funcionalidades de 4.9 a 4.15, testadas na prévia (`web/previa/`), ainda precisam ser distribuídas nas fases.
+**[em aberto]** As funcionalidades de 4.9 a 4.15 (incluindo as metas do dia, 4.9.1), testadas na prévia (`web/previa/`), ainda precisam ser distribuídas nas fases.

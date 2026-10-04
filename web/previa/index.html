@@ -221,6 +221,26 @@
     .numeros strong { display: block; font-size: 1.25rem; }
     .numeros span { font-size: 0.8125rem; color: var(--muted); }
 
+    /* Metas do dia */
+    .metas { display: grid; gap: 12px; }
+    .meta-linha { display: grid; gap: 6px; }
+    .meta-linha .botoes { margin-top: 0; }
+    .meta-linha .sub { color: var(--muted); font-size: 0.875rem; margin-top: 2px; }
+    .metas-comp { display: grid; gap: 12px; }
+    .meta-linha .btn { flex: 1; }
+    .meta-linha .btn.sim[aria-pressed="true"] { background: var(--pessoal); border-color: var(--pessoal); }
+    .meta-linha .btn.nao[aria-pressed="true"] { background: #b5584d; border-color: #b5584d; }
+    .tag-meta { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 6px; padding: 2px 6px; vertical-align: 1px; }
+    .tag-meta.parar { background: var(--aviso-claro); color: var(--aviso); }
+    .tag-meta.comecar { background: var(--pessoal-claro); color: var(--pessoal); }
+    .meta-nova { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .meta-nova input { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+    .meta-comp { display: grid; gap: 6px; }
+    .faixa-meta { display: flex; flex-wrap: wrap; gap: 3px; }
+    .faixa-meta i { width: 11px; height: 11px; border-radius: 3px; background: var(--line); }
+    .faixa-meta i.ok { background: var(--nivel-3); }
+    .faixa-meta i.nao { background: #e9c3bd; }
+
     /* Calendário */
     .mes-topo { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px; }
     .mes-topo h2 { margin: 0; font-size: 1.125rem; }
@@ -654,6 +674,24 @@
       }
     }
 
+    // Metas do dia: coisas sem horário, marcadas uma vez por dia.
+    const TIPO_META = { parar: 'Parar', comecar: 'Começar' };
+    const ROTULO_META = { parar: ['Evitei', 'Não evitei'], comecar: ['Fiz', 'Não fiz'] };
+    const metas = [
+      { id: 'm1', titulo: 'Comer doces', tipo: 'parar' },
+      { id: 'm2', titulo: 'Comer salada', tipo: 'comecar' },
+      { id: 'm3', titulo: 'Comer frutas', tipo: 'comecar' },
+    ];
+    const marcas = {}; // "meta|dia" -> true (cumpriu) ou false (não cumpriu)
+    for (let n = 1; n <= 75; n++) {
+      const k = em(-n);
+      metas.forEach((m, i) => {
+        const s = sorteio(m.id + k);
+        if (s < 0.07) return; // dia sem marcar
+        marcas[`${m.id}|${k}`] = s < [0.68, 0.74, 0.58][i];
+      });
+    }
+
     // ============ Regras de ocorrência ============
     function ocorreEm(item, d) {
       if (item.regra) {
@@ -770,6 +808,7 @@
       diaSelecionado: chave(HOJE),
       fluxo: null,        // { tipo: 'rotina' | 'fechamento' | 'planejamento', passo, dia, pulados }
       rascunho: { energia: null, texto: '' },
+      novaMeta: null,     // { titulo, tipo } enquanto cria uma meta
       busca: '',
     };
 
@@ -920,6 +959,78 @@
       return `<span class="carga ${c > LIMITE_DIA_PESADO ? 'pesada' : ''}">${fmtDur(c)}${c > LIMITE_DIA_PESADO ? ' · pesado' : ''}</span>`;
     }
 
+    // ============ Metas do dia ============
+    function diasDoMesAteHoje(ano, mes) {
+      const dias = [];
+      for (let d = new Date(ano, mes, 1); d.getMonth() === mes && d <= HOJE; d = somarDias(d, 1)) dias.push(d);
+      return dias;
+    }
+
+    function htmlTagMeta(m) { return `<span class="tag-meta ${m.tipo}">${TIPO_META[m.tipo]}</span>`; }
+
+    function htmlMetasDoDia(d) {
+      const k = chave(d);
+      const doMes = diasDoMesAteHoje(d.getFullYear(), d.getMonth());
+      const linhas = metas.map((m) => {
+        const v = marcas[`${m.id}|${k}`];
+        const ok = doMes.filter((x) => marcas[`${m.id}|${chave(x)}`] === true).length;
+        const [sim, nao] = ROTULO_META[m.tipo];
+        return `
+          <div class="meta-linha">
+            <div>${htmlTagMeta(m)} <strong>${esc(m.titulo)}</strong>
+              <div class="sub">Este mês: ${ok} de ${doMes.length} ${doMes.length === 1 ? 'dia' : 'dias'}</div>
+            </div>
+            <div class="botoes">
+              <button class="btn ${v === true ? 'sim' : ''}" type="button" data-acao="meta-marcar" data-meta="${m.id}" data-dia="${k}" data-valor="1" aria-pressed="${v === true}">${sim}</button>
+              <button class="btn ${v === false ? 'nao' : ''}" type="button" data-acao="meta-marcar" data-meta="${m.id}" data-dia="${k}" data-valor="0" aria-pressed="${v === false}">${nao}</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      const nova = tela.novaMeta;
+      const formNova = nova ? `
+        <div class="meta-nova">
+          <input type="text" id="meta-titulo" placeholder="Ex.: Beber 2 litros de água" value="${esc(nova.titulo)}">
+          <div class="botoes">${Object.entries(TIPO_META).map(([v, nome]) => `
+            <button class="btn" type="button" data-acao="meta-tipo" data-valor="${v}" aria-pressed="${nova.tipo === v}">${nome}</button>`).join('')}
+          </div>
+          <div class="botoes">
+            <button class="btn principal" type="button" data-acao="meta-salvar">Salvar meta</button>
+            <button class="btn" type="button" data-acao="meta-cancelar">Cancelar</button>
+          </div>
+        </div>`
+        : '<div class="botoes"><button class="btn" type="button" data-acao="meta-nova">+ Nova meta</button></div>';
+
+      return `<div class="metas">${linhas || '<p class="vazio">Nenhuma meta ainda.</p>'}</div>${formNova}`;
+    }
+
+    function htmlCompiladoMetas(dias) {
+      if (!metas.length) return '<p class="vazio">Nenhuma meta cadastrada.</p>';
+      return '<div class="metas-comp">' + metas.map((m) => {
+        let ok = 0;
+        let marcados = 0;
+        const celulas = dias.map((d) => {
+          const v = marcas[`${m.id}|${chave(d)}`];
+          if (v !== undefined) { marcados++; if (v) ok++; }
+          return `<i class="${v === true ? 'ok' : v === false ? 'nao' : ''}" title="${fmtDiaCurto(d)}"></i>`;
+        }).join('');
+        const semMarcar = dias.length - marcados;
+        return `
+          <div class="meta-comp">
+            <div class="barra-linha">
+              <span>${htmlTagMeta(m)} ${esc(m.titulo)}</span>
+              <span><strong>${ok} de ${dias.length}</strong> dias${semMarcar ? ` <small>(${semMarcar} sem marcar)</small>` : ''}</span>
+            </div>
+            <div class="faixa-meta">${celulas}</div>
+          </div>`;
+      }).join('') + `
+        <div class="legenda" style="margin-top:0">
+          <span><i style="background:var(--nivel-3)"></i>cumpriu</span>
+          <span><i style="background:#e9c3bd"></i>não cumpriu</span>
+          <span><i style="background:var(--line)"></i>sem marcar</span>
+        </div></div>`;
+    }
+
     // ============ Aba Dia ============
     function rotinaDaManha(d) {
       return itensDoDia(d, false).filter((i) => i.hora && !i.diaTodo && minutos(i.hora) < 9 * 60);
@@ -1030,6 +1141,16 @@
           </div>`;
       } else if (ehHoje) {
         html += '<div class="card"><h3>Rotina da manhã</h3><p class="sub">Hoje não tem rotina da manhã. Use a seta › para ver a de amanhã.</p></div>';
+      }
+
+      html += `<div class="card"><h3>Metas do dia</h3>${htmlMetasDoDia(d)}</div>`;
+
+      // Na primeira semana do mês, mostra o compilado do mês anterior.
+      if (ehHoje && HOJE.getDate() <= 7) {
+        const anterior = new Date(HOJE.getFullYear(), HOJE.getMonth() - 1, 1);
+        const dias = [];
+        for (let x = new Date(anterior); x.getMonth() === anterior.getMonth(); x = somarDias(x, 1)) dias.push(x);
+        html += `<div class="card"><h3>Compilado de ${MESES[anterior.getMonth()]} · metas</h3>${htmlCompiladoMetas(dias)}</div>`;
       }
 
       const c = cargaDoDia(d);
@@ -1228,8 +1349,12 @@
         dias.push(d);
       }
       const r = resumoRecorrentes(dias);
-      if (!r.total) return secao('Resumo do mês', [], '', 'Ainda não há dias passados neste mês.');
-      return `
+      const metasMes = diasDoMesAteHoje(ano, mes);
+      const blocoMetas = metasMes.length
+        ? `<section class="secao"><h2><span>Metas do mês</span></h2><div class="resumo">${htmlCompiladoMetas(metasMes)}</div></section>`
+        : '';
+      if (!r.total) return secao('Resumo do mês', [], '', 'Ainda não há dias passados neste mês.') + blocoMetas;
+      return blocoMetas + `
         <section class="secao">
           <h2><span>Resumo do mês até hoje</span></h2>
           <div class="resumo">
@@ -1244,6 +1369,10 @@
     function renderHistorico() {
       let html = `<input class="busca" id="busca" type="search" placeholder="Buscar em tudo: itens, notas e diário" value="${esc(tela.busca)}">
         <div id="busca-resultados">${htmlBusca(tela.busca)}</div>`;
+
+      // Metas dos últimos 30 dias
+      const ultimos30 = Array.from({ length: 30 }, (_, i) => somarDias(HOJE, i - 30));
+      html += `<section class="secao"><h2><span>Metas · últimos 30 dias</span></h2><div class="resumo">${htmlCompiladoMetas(ultimos30)}</div></section>`;
 
       // Consistência das últimas 8 semanas
       const semanas = [];
@@ -1382,7 +1511,7 @@
 
     function fluxoFechamento(f) {
       const d = deChave(f.dia);
-      const passos = 2;
+      const passos = 3;
       let miolo = '';
       if (f.passo === 0) {
         const abertos = itensDoDia(d, false).filter((i) => !estadoDe(i, d) && !i.diaTodo);
@@ -1390,6 +1519,10 @@
           <h2>O que ficou em aberto<small>Decida cada item: feito, não fazer ou reagendar.</small></h2>
           ${abertos.length ? `<ul class="itens">${abertos.map((i) => htmlItem(i, d, 'dia')).join('')}</ul>`
             : '<p class="vazio">Tudo decidido. Nenhum item em aberto.</p>'}`;
+      } else if (f.passo === 1) {
+        miolo = `
+          <h2>Metas do dia<small>Marque cada uma. O compilado sai no fim do mês.</small></h2>
+          ${htmlMetasDoDia(d)}`;
       } else {
         const r = tela.rascunho;
         miolo = `
@@ -1441,7 +1574,8 @@
             <div><strong>${media ? media.toFixed(1).replace('.', ',') : '—'}</strong><span>energia média</span></div>
           </div>
           <div class="resumo" style="margin-top:12px">${htmlBarrasRecorrentes(r.porItem)}</div>
-          <p class="vazio" style="margin-top:8px">${neutros} ${neutros === 1 ? 'item ficou' : 'itens ficaram'} como neutro e não ${neutros === 1 ? 'entrou' : 'entraram'} na conta.</p>`;
+          <p class="vazio" style="margin-top:8px">${neutros} ${neutros === 1 ? 'item ficou' : 'itens ficaram'} como neutro e não ${neutros === 1 ? 'entrou' : 'entraram'} na conta.</p>
+          <section class="secao"><h2><span>Metas da semana</span></h2><div class="resumo">${htmlCompiladoMetas(dias)}</div></section>`;
       } else if (f.passo === 1) {
         const resolver = paraResolver();
         const encaixar = aEncaixar().filter((i) => !estados[i.id]);
@@ -1591,6 +1725,21 @@
         avisar('Dia fechado. O registro aparece no calendário e no histórico.');
       },
       'planejamento-concluir': () => { tela.fluxo = null; avisar('Planejamento da semana concluído.'); },
+      'meta-marcar': (b) => {
+        const k = `${b.dataset.meta}|${b.dataset.dia}`;
+        const valor = b.dataset.valor === '1';
+        if (marcas[k] === valor) delete marcas[k]; else marcas[k] = valor;
+      },
+      'meta-nova': () => { tela.novaMeta = { titulo: '', tipo: 'comecar' }; },
+      'meta-tipo': (b) => { tela.novaMeta.tipo = b.dataset.valor; },
+      'meta-cancelar': () => { tela.novaMeta = null; },
+      'meta-salvar': () => {
+        const titulo = tela.novaMeta.titulo.trim();
+        if (!titulo) { avisar('Escreva o nome da meta.'); return; }
+        metas.push({ id: `m${Date.now()}`, titulo, tipo: tela.novaMeta.tipo });
+        tela.novaMeta = null;
+        avisar('Meta criada.');
+      },
     };
 
     document.addEventListener('click', (ev) => {
@@ -1668,6 +1817,7 @@
     document.addEventListener('input', (ev) => {
       if (ev.target.id === 'nota-dia') tela.rascunho.texto = ev.target.value;
       if (ev.target.id === 'plano-treino') planoTreino = ev.target.value;
+      if (ev.target.id === 'meta-titulo') tela.novaMeta.titulo = ev.target.value;
       if (ev.target.id === 'busca') {
         tela.busca = ev.target.value;
         document.getElementById('busca-resultados').innerHTML = htmlBusca(tela.busca);
