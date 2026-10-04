@@ -167,9 +167,6 @@
     .dia-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
     .dia-nav h2 { margin: 0; font-size: 1.125rem; text-align: center; flex: 1; }
     .dia-nav .btn { padding: 6px 12px; }
-    .seg { display: flex; background: var(--line); border-radius: 10px; padding: 3px; margin-top: 16px; }
-    .seg button { flex: 1; border: 0; background: none; border-radius: 8px; padding: 8px; font-weight: 600; font-size: 0.875rem; color: var(--muted); }
-    .seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); }
     .carga-dia { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.875rem; margin-top: 10px; }
     .carga-dia strong { color: var(--ink); }
     .carga-dia .pesada { color: var(--aviso); font-weight: 700; }
@@ -283,11 +280,6 @@
 
     /* Histórico */
     .busca { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); margin-top: 12px; }
-    .consist { display: grid; grid-template-columns: minmax(0, 1fr) repeat(8, 18px) 40px; gap: 4px; align-items: center; font-size: 0.8125rem; }
-    .consist .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .consist .cel { width: 18px; height: 18px; border-radius: 4px; background: var(--line); }
-    .consist .pct { text-align: right; color: var(--muted); }
-    .consist .cab { font-size: 0.6875rem; color: var(--muted); text-align: center; }
     .grafico-energia { display: flex; align-items: flex-end; gap: 4px; height: 80px; }
     .grafico-energia div { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
     .grafico-energia i { width: 100%; border-radius: 4px 4px 0 0; background: var(--nivel-2); }
@@ -823,7 +815,7 @@
       painel: 'acoes',    // 'acoes' | 'nao' | 'reagendar'
       motivo: null,
       dia: chave(HOJE),
-      modoDia: 'linha',
+      mesHist: new Date(HOJE.getFullYear(), HOJE.getMonth(), 1),
       mes: new Date(HOJE.getFullYear(), HOJE.getMonth(), 1),
       diaSelecionado: chave(HOJE),
       fluxo: null,        // { tipo: 'rotina' | 'fechamento' | 'planejamento', passo, dia, pulados }
@@ -992,11 +984,8 @@
 
     function htmlMetasDoDia(d) {
       const k = chave(d);
-      const doMes = diasDoMesAteHoje(d.getFullYear(), d.getMonth());
       const linhas = metas.map((m) => {
         const v = marcas[`${m.id}|${k}`];
-        const ok = doMes.filter((x) => cumpriu(m, marcas[`${m.id}|${chave(x)}`]) === true).length;
-        const resumo = `Este mês: ${ok} de ${doMes.length} ${doMes.length === 1 ? 'dia' : 'dias'}`;
         let botoes;
         if (porQuantidade(m)) {
           const c = cumpriu(m, v);
@@ -1016,7 +1005,7 @@
         return `
           <div class="meta-linha">
             <div>${htmlTagMeta(m)} <strong>${esc(m.titulo)}</strong>
-              <div class="sub">${porQuantidade(m) ? `${textoAlvo(m)} · ` : ''}${resumo}</div>
+              ${porQuantidade(m) ? `<div class="sub">${textoAlvo(m)}</div>` : ''}
             </div>
             ${botoes}
           </div>`;
@@ -1197,12 +1186,15 @@
 
       html += `<div class="card"><h3>Metas do dia</h3>${htmlMetasDoDia(d)}</div>`;
 
-      // Na primeira semana do mês, mostra o compilado do mês anterior.
+      // Na primeira semana do mês, lembra que o compilado do mês anterior está pronto.
       if (ehHoje && HOJE.getDate() <= 7) {
         const anterior = new Date(HOJE.getFullYear(), HOJE.getMonth() - 1, 1);
-        const dias = [];
-        for (let x = new Date(anterior); x.getMonth() === anterior.getMonth(); x = somarDias(x, 1)) dias.push(x);
-        html += `<div class="card"><h3>Compilado de ${MESES[anterior.getMonth()]} · metas</h3>${htmlCompiladoMetas(dias)}</div>`;
+        html += `
+          <div class="card">
+            <h3>${maiuscula(MESES[anterior.getMonth()])} fechou</h3>
+            <p class="sub">O compilado do mês está pronto: hábitos, metas, energia e diário.</p>
+            <div class="botoes"><button class="btn" type="button" data-acao="ver-compilado">Ver o compilado</button></div>
+          </div>`;
       }
 
       const c = cargaDoDia(d);
@@ -1219,20 +1211,11 @@
           `"${esc(x.i.titulo)}" (${fmtMin(x.a)}–${fmtMin(x.b)}) se sobrepõe a "${esc(y.i.titulo)}" (${fmtMin(y.a)}).`).join('<br>')}</div>`;
       }
 
-      html += `
-        <div class="seg" role="group" aria-label="Modo de visualização">
-          <button type="button" data-acao="modo-dia" data-modo="linha" aria-pressed="${tela.modoDia === 'linha'}">Linha do tempo</button>
-          <button type="button" data-acao="modo-dia" data-modo="lista" aria-pressed="${tela.modoDia === 'lista'}">Lista</button>
-        </div>`;
-
       const semHora = doDia.filter((i) => i.diaTodo || !i.hora);
-      if (tela.modoDia === 'linha') {
-        if (semHora.length) html += secao('Dia todo ou sem horário', semHora.map((i) => htmlItem(i, d, 'dia')));
-        html += htmlLinhaDoTempo(d);
-        html += '<p class="vazio" style="margin-top:8px">Toque em um bloco para ver os detalhes e marcar.</p>';
-      } else {
-        html += secao('Itens do dia', doDia.map((i) => htmlItem(i, d, 'dia')));
-      }
+      if (semHora.length) html += secao('Dia todo ou sem horário', semHora.map((i) => htmlItem(i, d, 'dia')));
+      html += '<section class="secao"><h2><span>Linha do tempo</span></h2></section>';
+      html += htmlLinhaDoTempo(d);
+      html += '<p class="vazio" style="margin-top:8px">Toque em um bloco para ver os detalhes e marcar.</p>';
 
       if (doDia.some((i) => i.tipo === 'treino')) {
         html += `<div class="card"><h3>Plano de treino da semana</h3><p style="white-space:pre-line;font-size:0.9375rem">${esc(planoTreino)}</p></div>`;
@@ -1360,7 +1343,7 @@
         </div>
         ${secao(fmtDiaLongo(sel), itensDoDia(sel).map((i) => htmlItem(i, sel, 'dia')), '', 'Nada planejado.', htmlCarga(sel))}
         ${registro ? `<section class="secao"><h2><span>Como foi o dia</span></h2>${registro}</section>` : ''}
-        ${renderResumoMes(ano, mes, diasNoMes)}`;
+        <div class="botoes" style="margin-top:16px"><button class="btn" type="button" data-acao="ver-mes-hist">Ver os números de ${MESES[mes]} no Histórico</button></div>`;
     }
 
     function resumoRecorrentes(dias) {
@@ -1393,87 +1376,56 @@
         </div>`).join('');
     }
 
-    function renderResumoMes(ano, mes, diasNoMes) {
-      const dias = [];
-      for (let dia = 1; dia <= diasNoMes; dia++) {
-        const d = new Date(ano, mes, dia);
-        if (d >= HOJE) break;
-        dias.push(d);
-      }
-      const r = resumoRecorrentes(dias);
-      const metasMes = diasDoMesAteHoje(ano, mes);
-      const blocoMetas = metasMes.length
-        ? `<section class="secao"><h2><span>Metas do mês</span></h2><div class="resumo">${htmlCompiladoMetas(metasMes)}</div></section>`
-        : '';
-      if (!r.total) return secao('Resumo do mês', [], '', 'Ainda não há dias passados neste mês.') + blocoMetas;
-      return blocoMetas + `
-        <section class="secao">
-          <h2><span>Resumo do mês até hoje</span></h2>
+    // ============ Aba Histórico (todos os números, por mês) ============
+    function renderHistorico() {
+      const ano = tela.mesHist.getFullYear();
+      const mes = tela.mesHist.getMonth();
+      const ehMesAtual = ano === HOJE.getFullYear() && mes === HOJE.getMonth();
+      const futuro = tela.mesHist > HOJE;
+
+      let html = `<input class="busca" id="busca" type="search" placeholder="Buscar em tudo: itens, notas e diário" value="${esc(tela.busca)}">
+        <div id="busca-resultados">${htmlBusca(tela.busca)}</div>
+        <div class="mes-topo">
+          <button class="btn" type="button" data-acao="hist-mes" data-passo="-1" aria-label="Mês anterior">‹</button>
+          <h2>${maiuscula(MESES[mes])} ${ano}${ehMesAtual ? ' <small style="font-weight:400;color:var(--muted)">até hoje</small>' : ''}</h2>
+          <button class="btn" type="button" data-acao="hist-mes" data-passo="1" aria-label="Próximo mês">›</button>
+        </div>`;
+      if (futuro) return html + '<p class="vazio">Este mês ainda não começou.</p>';
+
+      // Dias que já terminaram (hábitos) e dias até hoje (metas e registros).
+      const diasMes = diasDoMesAteHoje(ano, mes);
+      const passados = diasMes.filter((d) => d < HOJE);
+
+      // Hábitos, treinos e estudos
+      const r = resumoRecorrentes(passados);
+      html += r.total ? `
+        <section class="secao"><h2><span>Hábitos, treinos e estudos</span></h2>
           <div class="resumo">
             <div class="total"><strong>${Math.round((r.feitos / r.total) * 100)}%</strong> concluído (${r.feitos} de ${r.total}${r.minimas ? `, ${r.minimas} na versão mínima` : ''})</div>
             ${htmlBarrasRecorrentes(r.porItem)}
-            <p class="vazio" style="margin:0">Verde-escuro: feito completo · verde-claro: versão mínima. Itens marcados como "neutro" não entram na conta.</p>
+            <p class="vazio" style="margin:0">Verde-escuro: feito completo · verde-claro: versão mínima. "Neutro" não entra na conta.</p>
           </div>
-        </section>`;
-    }
+        </section>` : secao('Hábitos, treinos e estudos', [], '', 'Ainda não há dias terminados neste mês.');
 
-    // ============ Aba Histórico ============
-    function renderHistorico() {
-      let html = `<input class="busca" id="busca" type="search" placeholder="Buscar em tudo: itens, notas e diário" value="${esc(tela.busca)}">
-        <div id="busca-resultados">${htmlBusca(tela.busca)}</div>`;
+      // Metas do dia
+      html += `<section class="secao"><h2><span>Metas do dia</span></h2><div class="resumo">${htmlCompiladoMetas(diasMes)}</div></section>`;
 
-      // Metas dos últimos 30 dias
-      const ultimos30 = Array.from({ length: 30 }, (_, i) => somarDias(HOJE, i - 30));
-      html += `<section class="secao"><h2><span>Metas · últimos 30 dias</span></h2><div class="resumo">${htmlCompiladoMetas(ultimos30)}</div></section>`;
-
-      // Consistência das últimas 8 semanas
-      const semanas = [];
-      for (let s = 7; s >= 0; s--) {
-        const dias = [];
-        for (let n = 7 * s + 7; n > 7 * s; n--) dias.push(somarDias(HOJE, -n));
-        semanas.push(dias);
-      }
-      const recorrentes = itens.filter((i) => i.regra);
-      let grade = `<div class="cab"></div>${semanas.map((_, i) => `<div class="cab">${i === 7 ? 'últ.' : ''}</div>`).join('')}<div class="cab">total</div>`;
-      for (const item of recorrentes) {
-        let tot = 0;
-        let fei = 0;
-        const celulas = semanas.map((dias) => {
-          let t = 0;
-          let f = 0;
-          for (const d of dias) {
-            if (!ocorreEm(item, d)) continue;
-            const e = estadoDe(item, d);
-            if (e && (e.conta === 'neutro' || e.estado === 'reagendado')) continue;
-            t++;
-            if (e && e.estado === 'feito') f++;
-          }
-          tot += t;
-          fei += f;
-          return `<div class="cel ${t ? nivel(f / t) : ''}" title="${f} de ${t}"></div>`;
-        }).join('');
-        grade += `<div class="nome">${esc(item.titulo)}</div>${celulas}<div class="pct">${tot ? Math.round((fei / tot) * 100) + '%' : '—'}</div>`;
-      }
-      html += `<section class="secao"><h2><span>Consistência · últimas 8 semanas</span></h2><div class="resumo"><div class="consist">${grade}</div></div></section>`;
-
-      // Energia dos últimos 14 dias
-      const barras = [];
-      for (let n = 14; n >= 1; n--) {
-        const d = somarDias(HOJE, -n);
-        const r = registros[chave(d)];
-        barras.push(`<div><i class="${r ? '' : 'vazio'}" style="height:${r ? r.energia * 20 : 4}%"></i><span>${DIAS_CURTOS[d.getDay()].charAt(0).toUpperCase()}</span></div>`);
-      }
-      const comEnergia = Object.keys(registros).filter((k) => diferencaDias(deChave(k), HOJE) <= 14 && deChave(k) < HOJE);
-      const media = comEnergia.length ? comEnergia.reduce((s, k) => s + registros[k].energia, 0) / comEnergia.length : 0;
+      // Energia
+      const comRegistro = passados.filter((d) => registros[chave(d)]);
+      const media = comRegistro.length ? comRegistro.reduce((s, d) => s + registros[chave(d)].energia, 0) / comRegistro.length : 0;
+      const barras = passados.map((d) => {
+        const reg = registros[chave(d)];
+        const rotulo = d.getDate() === 1 || d.getDate() % 5 === 0 ? d.getDate() : '';
+        return `<div title="${fmtDiaCurto(d)}"><i class="${reg ? '' : 'vazio'}" style="height:${reg ? reg.energia * 20 : 4}%"></i><span>${rotulo}</span></div>`;
+      }).join('');
       html += `
-        <section class="secao"><h2><span>Energia · últimos 14 dias</span><span class="carga">média ${media.toFixed(1).replace('.', ',')}</span></h2>
-          <div class="resumo"><div class="grafico-energia">${barras.join('')}</div></div>
+        <section class="secao"><h2><span>Energia</span>${comRegistro.length ? `<span class="carga">média ${media.toFixed(1).replace('.', ',')}</span>` : ''}</h2>
+          <div class="resumo">${barras ? `<div class="grafico-energia">${barras}</div>` : '<p class="vazio">Sem registros ainda.</p>'}</div>
         </section>`;
 
-      // Motivos de "não fiz" nos últimos 30 dias
+      // Motivos de "não fiz"
       const contagem = {};
-      for (let n = 1; n <= 30; n++) {
-        const d = somarDias(HOJE, -n);
+      for (const d of passados) {
         for (const item of itens) {
           if (!ocorreEm(item, d)) continue;
           const e = estadoDe(item, d);
@@ -1482,19 +1434,19 @@
       }
       const maximo = Math.max(1, ...Object.values(contagem));
       html += `
-        <section class="secao"><h2><span>Motivos de "não fiz" · 30 dias</span></h2>
+        <section class="secao"><h2><span>Motivos de "não fiz"</span></h2>
           <div class="resumo">${Object.entries(contagem).sort((a, b) => b[1] - a[1]).map(([m, q]) => `
             <div class="barra-linha"><span>${m}</span><span>${q}</span><span class="barra"><i style="width:${(q / maximo) * 100}%"></i></span></div>`).join('') || '<p class="vazio">Nada registrado.</p>'}
           </div>
         </section>`;
 
       // Diário
-      const entradas = Object.keys(registros).sort().reverse().slice(0, 12);
+      const entradas = diasMes.map(chave).filter((k) => registros[k]).reverse();
       html += `<section class="secao"><h2><span>Diário</span></h2><div style="display:grid;gap:6px">${entradas.map((k) => `
         <div class="registro">
           <div class="quando"><span>${fmtDiaLongo(deChave(k))}</span>${htmlPontosEnergia(registros[k].energia)}</div>
           ${registros[k].texto ? `<div>${esc(registros[k].texto)}</div>` : '<div class="vazio" style="padding:0">Sem texto.</div>'}
-        </div>`).join('')}</div></section>`;
+        </div>`).join('') || '<p class="vazio">Nenhum registro neste mês.</p>'}</div></section>`;
       return html;
     }
 
@@ -1532,9 +1484,20 @@
       if (!f) { document.getElementById('fundo-fluxo').hidden = true; return; }
       document.getElementById('fundo-fluxo').hidden = false;
       const rolagem = el.querySelector('.miolo')?.scrollTop || 0;
-      el.innerHTML = f.tipo === 'rotina' ? fluxoRotina(f) : f.tipo === 'fechamento' ? fluxoFechamento(f) : fluxoPlanejamento(f);
+      const fluxos = { item: fluxoItem, rotina: fluxoRotina, fechamento: fluxoFechamento, planejamento: fluxoPlanejamento };
+      el.innerHTML = fluxos[f.tipo](f);
+      el.classList.toggle('cheia', f.tipo !== 'item');
       const miolo = el.querySelector('.miolo');
       if (miolo) miolo.scrollTop = rolagem;
+    }
+
+    // Janela de um item, aberta ao tocar num bloco da linha do tempo.
+    function fluxoItem(f) {
+      const item = itens.find((i) => i.id === f.id);
+      const d = deChave(f.dia);
+      return `
+        <div class="passos-topo"><span>${fmtDiaLongo(d)}</span><button class="btn" type="button" data-acao="fluxo-fechar">Fechar</button></div>
+        <ul class="itens" style="margin-top:12px">${htmlItem(item, d, 'dia', true)}</ul>`;
     }
 
     function fluxoRotina(f) {
@@ -1725,6 +1688,7 @@
         item.data = chave(nova);
         delete estados[item.id];
       }
+      if (tela.fluxo && tela.fluxo.tipo === 'item') tela.fluxo = null;
       tela.aberto = null;
       avisar(`Movido para ${rotuloDia(nova)}.`);
     }
@@ -1754,8 +1718,14 @@
       'dia-cal': (b) => { tela.diaSelecionado = b.dataset.dia; tela.aberto = null; },
       'dia-nav': (b) => { tela.dia = chave(somarDias(deChave(tela.dia), Number(b.dataset.passo))); tela.aberto = null; },
       'dia-hoje': () => { tela.dia = chave(HOJE); tela.aberto = null; },
-      'modo-dia': (b) => { tela.modoDia = b.dataset.modo; tela.aberto = null; },
-      'bloco': (b) => { tela.modoDia = 'lista'; tela.aberto = `${b.dataset.id}|${b.dataset.dia}`; tela.painel = 'acoes'; },
+      'bloco': (b) => { tela.fluxo = { tipo: 'item', id: b.dataset.id, dia: b.dataset.dia }; tela.painel = 'acoes'; tela.motivo = null; },
+      'hist-mes': (b) => { tela.mesHist = new Date(tela.mesHist.getFullYear(), tela.mesHist.getMonth() + Number(b.dataset.passo), 1); },
+      'ver-compilado': () => {
+        tela.aba = 'historico';
+        tela.mesHist = new Date(HOJE.getFullYear(), HOJE.getMonth() - 1, 1);
+        window.scrollTo(0, 0);
+      },
+      'ver-mes-hist': () => { tela.aba = 'historico'; tela.mesHist = new Date(tela.mes); window.scrollTo(0, 0); },
       'fluxo-abrir': (b) => {
         const tipo = b.dataset.fluxo;
         tela.fluxo = { tipo, passo: 0, dia: tipo === 'rotina' ? tela.dia : chave(HOJE), pulados: new Set() };
@@ -1823,7 +1793,8 @@
       const d = li.dataset.dia ? deChave(li.dataset.dia) : null;
       const k = chaveOcorrencia(item, d);
       const idAberto = `${item.id}|${li.dataset.dia}`;
-      const naRotina = tela.fluxo && tela.fluxo.tipo === 'rotina';
+      // Na rotina e na janela de um item, o painel fica sempre aberto.
+      const naRotina = tela.fluxo && (tela.fluxo.tipo === 'rotina' || tela.fluxo.tipo === 'item');
 
       switch (acao) {
         case 'abrir':

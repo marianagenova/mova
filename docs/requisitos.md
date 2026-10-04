@@ -93,8 +93,22 @@ Cada item terá botões claros para:
 Uma tarefa agendada que não foi feita no dia planejado fica pendente, de forma neutra, e não aparece como vencida.
 
 ### 4.4 Calendário e resumo do mês
-- Calendário com compromissos, tarefas, hábitos, treinos e estudos.
-- Resumo do mês com as duas visões: dias coloridos conforme o quanto foi concluído e números por hábito.
+- Calendário com compromissos, tarefas, hábitos, treinos e estudos, e os dias coloridos conforme o quanto foi concluído.
+- Ao tocar num dia: os itens daquele dia e o registro "como foi o dia".
+- Os números do mês (por hábito, metas, energia) ficam no Histórico (ver 4.15), e não no calendário.
+
+### 4.4.1 Uma função para cada aba
+Cada informação aparece em um lugar só:
+
+| Aba | Para que serve |
+|---|---|
+| Dia | Fazer o dia de hoje: agora, rotina, metas, linha do tempo e fechar o dia |
+| Lista | Os próximos dias: para resolver, prazos chegando e os próximos 7 dias |
+| A encaixar | Tarefas sem dia para fazer |
+| Calendário | O mês e o que aconteceu em cada dia |
+| Histórico | Todos os números, por mês: o compilado do mês |
+
+O planejamento de domingo é a única exceção: mostra os números da semana, porque faz parte do ritual de planejar.
 
 ### 4.5 Trabalho e conflitos
 - Itens de trabalho (viagens, reuniões fora do horário) entram na agenda pessoal, inclusive ocupando vários dias.
@@ -119,7 +133,7 @@ O dia é fechado à noite, em dois passos:
 1. **O que ficou em aberto:** o app lista os itens do dia sem decisão, e cada um recebe feito, não fazer ou reagendar. Nenhum dia termina com coisa em aberto.
 2. **Como foi o dia:** energia de 1 a 5 (um toque) e uma frase livre, opcional.
 
-O registro aparece no calendário (no dia escolhido) e no histórico (diário e gráfico de energia).
+O registro aparece no calendário (no dia escolhido) e, somado, no Histórico do mês (diário e gráfico de energia).
 
 ### 4.9.1 Metas do dia
 Coisas que não têm horário e não são hábitos, marcadas uma vez por dia:
@@ -127,11 +141,11 @@ Coisas que não têm horário e não são hábitos, marcadas uma vez por dia:
 - **Começar** (ex.: comer salada, comer frutas): "Fiz" ou "Não fiz".
 - **Por quantidade (opcional):** a meta pode ter um número por dia, marcado com um toque (0, 1, 2…). Em "Começar", conta como cumprida se chegar pelo menos ao alvo (ex.: pelo menos 2 porções de fruta). Em "Parar", se ficar no máximo no limite (ex.: nenhum doce). O compilado mostra também o total e a média por dia.
 
-Aparecem na visão do dia e no fechamento do dia, e é possível criar metas novas. O compilado (dias cumpridos, não cumpridos e sem marcar) aparece no resumo do mês, no histórico (últimos 30 dias), no planejamento da semana e, na primeira semana de cada mês, como "Compilado do mês anterior" na visão do dia.
+São marcadas na visão do dia ou no fechamento do dia, e é possível criar metas novas. O compilado (dias cumpridos, não cumpridos e sem marcar) fica no Histórico, por mês, e na semana do planejamento de domingo. Na primeira semana de cada mês, a visão do dia avisa que o compilado do mês anterior está pronto, com um botão que leva até ele.
 
 ### 4.10 Visão do dia
 - **Agora:** o que está acontecendo, até que horas, o que vem a seguir e em quanto tempo.
-- **Linha do tempo:** os itens desenhados nas horas do dia, mostrando os espaços livres. Itens que se sobrepõem ficam destacados, com um aviso. Também há o modo lista.
+- **Linha do tempo:** os itens desenhados nas horas do dia, mostrando os espaços livres. Itens que se sobrepõem ficam destacados, com um aviso. Tocar num bloco abre o item numa janela, com os detalhes e os botões de ação.
 - **Duração e carga do dia:** cada item tem uma duração estimada (com um padrão por tipo). O dia mostra o total planejado e aparece como "pesado" acima de 6 horas.
 
 ### 4.11 Etapas e rotinas
@@ -157,7 +171,7 @@ Uma tela guiada para os 15 minutos de domingo:
 
 ### 4.15 Detalhes, histórico e busca
 - **Detalhes no item:** onde, o que levar e observações.
-- **Histórico:** consistência de cada hábito nas últimas 8 semanas, energia dos últimos 14 dias, motivos de "não fiz" nos últimos 30 dias e diário.
+- **Histórico, por mês** (com setas para trocar o mês): percentual concluído e números por hábito, treino e estudo (com a versão mínima separada), metas do dia, energia, motivos de "não fiz" e diário. É o compilado do mês.
 - **Busca** em itens, notas, etapas e diário.
 
 ## 5. Visual
