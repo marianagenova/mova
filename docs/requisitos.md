@@ -1,4 +1,4 @@
-# Requisitos do app de hábitos e tarefas
+# Requisitos do app de tarefas e rotina
 
 **Versão 3 — rascunho para revisão · 4 de outubro de 2026**
 
@@ -9,7 +9,7 @@
 
 ## 1. Objetivo
 
-Um único lugar para soltar tudo o que precisa ser feito (hábitos, tarefas, compromissos, treino e estudo), marcar o que foi concluído e ver depois o quanto foi feito.
+Um único lugar para soltar tudo o que precisa ser feito (tarefas, inclusive as que se repetem, compromissos, treino e estudo), marcar o que foi concluído e ver depois o quanto foi feito.
 
 - Substitui o app Reminder da Samsung e, se ficar bom o bastante, o Google Calendar.
 - O que dá prazer: concluir o item, mostrar para si mesma que foi feito e ver o histórico depois.
@@ -36,8 +36,7 @@ Um único lugar para soltar tudo o que precisa ser feito (hábitos, tarefas, com
 
 | Tipo | Descrição |
 |---|---|
-| Tarefa | Algo a ser feito uma vez. Pode ter prazo e/ou um horário planejado, ambos opcionais (ver 3.1) |
-| Hábito | Se repete; deve ser fácil de distinguir de uma tarefa |
+| Tarefa | Algo a ser feito. Pode acontecer uma vez (com prazo e/ou horário planejado, ambos opcionais, ver 3.1) ou se repetir (ex.: ligação nos dias úteis), com ícone de repetição |
 | Compromisso | Acontece em um horário imposto por outra pessoa ou por algo externo (ex.: consulta, reunião, voo); ocupa o calendário e pode durar vários dias (ex.: viagem) |
 | Treino | Tipo de treino do dia, com check de feito ou não |
 | Estudo | Sessões com horário e lista de leituras |
@@ -67,7 +66,7 @@ Um único lugar para soltar tudo o que precisa ser feito (hábitos, tarefas, com
 
 **Regra do "vencido":** só itens com prazo ficam vencidos (em vermelho). Uma tarefa agendada que não foi feita no dia planejado aparece como pendente, de forma neutra, e não como vencida.
 
-**Repetição:** o que se repete (ex.: mercado toda semana) é um hábito.
+**Repetição:** uma tarefa pode se repetir (ex.: mercado toda semana). O tipo "Hábito" existia antes e foi unido a Tarefa. Uma tarefa que se repete precisa do dia de início (a hora é opcional), não tem prazo, não vai para "A encaixar" e não fica vencida: cada dia é marcado como feito, não fazer ou reagendado.
 
 ## 4. Funcionalidades
 
@@ -80,7 +79,7 @@ Um único lugar para soltar tudo o que precisa ser feito (hábitos, tarefas, com
 
 ### 4.2 Cadastro rápido
 Cadastrar um item novo deve ser fácil e rápido (hoje essa é a maior dor).
-- **Obrigatórios:** título, tipo e área. Data e hora são obrigatórias para compromisso e hábito. Em uma tarefa, prazo e "quando vou fazer" são opcionais; sem "quando vou fazer", ela vai para "A encaixar", tenha prazo ou não.
+- **Obrigatórios:** título, tipo e área. Data e hora são obrigatórias para compromisso, treino e estudo. Em uma tarefa que não se repete, prazo e "quando vou fazer" são opcionais; sem "quando vou fazer", ela vai para "A encaixar", tenha prazo ou não.
 - **Opcionais, com padrões prontos:** repetição e lembrete.
 - Tudo é classificado na hora do cadastro.
 - A hora é digitada direto, com o teclado de números (ex.: 1430 vira 14:30), sem o relógio do Android.
@@ -96,9 +95,9 @@ Cada item também pode ser **editado** ou **excluído**. Ao excluir um item que 
 Uma tarefa agendada que não foi feita no dia planejado fica pendente, de forma neutra, e não aparece como vencida.
 
 ### 4.4 Calendário e resumo do mês
-- Calendário com compromissos, tarefas, hábitos, treinos e estudos, e os dias coloridos conforme o quanto foi concluído.
+- Calendário com compromissos, tarefas, treinos e estudos, e os dias coloridos conforme o quanto foi concluído.
 - Ao tocar num dia: os itens daquele dia e o registro "como foi o dia".
-- Os números do mês (por hábito, metas, energia) ficam no Histórico (ver 4.15), e não no calendário.
+- Os números do mês (por item que se repete, metas, energia) ficam no Histórico (ver 4.15), e não no calendário.
 
 ### 4.4.1 Uma função para cada aba
 Cada informação aparece em um lugar só:
@@ -139,7 +138,7 @@ O dia é fechado à noite, em dois passos:
 O registro aparece no calendário (no dia escolhido) e, somado, no Histórico do mês (diário e gráfico de energia).
 
 ### 4.9.1 Metas do dia
-Coisas que não têm horário e não são hábitos, marcadas uma vez por dia:
+Coisas que não têm horário e não são tarefas, marcadas uma vez por dia:
 - **Parar** (ex.: comer doces): "Evitei" ou "Não evitei".
 - **Começar** (ex.: comer salada, comer frutas): "Fiz" ou "Não fiz".
 - **Por quantidade (opcional):** a meta pode ter um número por dia, marcado com um toque (0, 1, 2…). Em "Começar", conta como cumprida se chegar pelo menos ao alvo (ex.: pelo menos 2 porções de fruta). Em "Parar", se ficar no máximo no limite (ex.: nenhum doce). O compilado mostra também o total e a média por dia.
@@ -156,7 +155,7 @@ São marcadas na visão do dia ou no fechamento do dia, e é possível criar met
 - **Etapas dentro de uma tarefa:** uma tarefa pode ser dividida em etapas, e o app destaca a próxima. Quando todas são marcadas, a tarefa é concluída.
 
 ### 4.12 Versão mínima e plano B
-- **Versão mínima:** um hábito, treino ou estudo pode ter uma versão para dia ruim (ex.: "10 minutos de leitura"). Ela conta como feita, mas aparece separada no histórico.
+- **Versão mínima:** uma tarefa que se repete, um treino ou um estudo pode ter uma versão para dia ruim (ex.: "10 minutos de leitura"). Ela conta como feita, mas aparece separada no histórico.
 - **Plano B:** um item pode ter uma alternativa definida (ex.: "estudo curto na segunda"). Ao marcar "não fazer", o app oferece criar o plano B.
 - **Motivo do "não fiz":** opcional, com opções rápidas (cansaço, imprevisto, trabalho, saúde, esqueci, outro).
 
@@ -167,14 +166,14 @@ Modelos criam um item já preenchido e os itens que costumam vir junto:
 
 ### 4.14 Planejamento da semana (domingo)
 Uma tela guiada para os 15 minutos de domingo:
-1. Como foi a semana: percentual concluído, versão mínima, falhas, energia média e números por hábito.
+1. Como foi a semana: percentual concluído, versão mínima, falhas, energia média e números por item que se repete.
 2. Prazos e tarefas a encaixar, com o botão de agendar.
 3. Carga dos próximos 7 dias, dias pesados, sobreposições e conflitos com Trabalho.
 4. Plano de treino da semana (texto).
 
 ### 4.15 Detalhes, histórico e busca
 - **Detalhes no item:** onde, o que levar e observações.
-- **Histórico, por mês** (com setas para trocar o mês): percentual concluído e números por hábito, treino e estudo (com a versão mínima separada), metas do dia, energia, motivos de "não fiz" e diário. É o compilado do mês.
+- **Histórico, por mês** (com setas para trocar o mês): percentual concluído e números de tudo o que se repete (com a versão mínima separada), metas do dia, energia, motivos de "não fiz" e diário. É o compilado do mês.
 - **Busca** em itens, notas, etapas e diário.
 
 ## 5. Visual

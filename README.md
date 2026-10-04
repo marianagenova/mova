@@ -1,6 +1,6 @@
 # Mova
 
-App pessoal de hábitos e tarefas: um único lugar para soltar tudo o que precisa ser feito (hábitos, tarefas, compromissos, treino e estudo), marcar o que foi concluído e ver depois o quanto foi feito.
+App pessoal de tarefas e rotina: um único lugar para soltar tudo o que precisa ser feito (tarefas, inclusive as que se repetem, compromissos, treino e estudo), marcar o que foi concluído e ver depois o quanto foi feito.
 
 Substitui o Reminder da Samsung e, se ficar bom o bastante, o Google Calendar.
 
@@ -14,7 +14,7 @@ Substitui o Reminder da Samsung e, se ficar bom o bastante, o Google Calendar.
 ### Conceitos principais
 
 - **Áreas** (uma cor para cada): Trabalho e Pessoal.
-- **Tipos de item** (um ícone para cada): Tarefa, Hábito, Compromisso, Treino e Estudo.
+- **Tipos de item** (um ícone para cada): Tarefa (que pode se repetir), Compromisso, Treino e Estudo.
 - **Estados:** pendente, vencido (só itens com prazo), feito, não fazer e reagendado.
 - **Repetições:** todo dia, dias úteis, dias específicos da semana, a cada N dias ou semanas, uma vez por mês.
 
