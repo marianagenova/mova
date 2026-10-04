@@ -12,8 +12,9 @@ function ConvertTo-Base64Url([byte[]] $bytes) {
 
 $parameters = New-Object System.Security.Cryptography.CngKeyCreationParameters
 $parameters.ExportPolicy = [System.Security.Cryptography.CngExportPolicies]::AllowPlaintextExport
+# [NullString]::Value cria uma chave temporária; $null viraria "" e salvaria a chave no Windows.
 $key = [System.Security.Cryptography.CngKey]::Create(
-    [System.Security.Cryptography.CngAlgorithm]::ECDsaP256, $null, $parameters)
+    [System.Security.Cryptography.CngAlgorithm]::ECDsaP256, [NullString]::Value, $parameters)
 
 # Formato ECCPRIVATEBLOB: 4 bytes de tipo, 4 bytes de tamanho, depois X, Y e D com 32 bytes cada.
 $blob = $key.Export([System.Security.Cryptography.CngKeyBlobFormat]::EccPrivateBlob)
