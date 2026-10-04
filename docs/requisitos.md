@@ -90,6 +90,8 @@ Cada item terá botões claros para:
 - **Não fazer** — o app pergunta em seguida se conta como **falha** ou como **neutro** no histórico.
 - **Reagendar**
 
+Cada item também pode ser **editado** ou **excluído**. Ao excluir um item que se repete, o app pergunta o que excluir: **só este dia**, **este e os próximos** (a repetição termina no dia anterior e o histórico continua) ou **todos, inclusive o histórico**.
+
 Uma tarefa agendada que não foi feita no dia planejado fica pendente, de forma neutra, e não aparece como vencida.
 
 ### 4.4 Calendário e resumo do mês

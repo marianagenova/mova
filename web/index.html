@@ -137,6 +137,7 @@
 
     .botoes { display: flex; flex-wrap: wrap; gap: 6px; }
     .botoes.gerenciar { gap: 16px; }
+    .botoes.coluna { flex-direction: column; align-items: stretch; }
     .link { background: none; border: 0; padding: 4px 0; color: var(--muted); font-size: 0.8125rem; text-decoration: underline; }
     .btn {
       border: 1px solid var(--line); background: var(--card); border-radius: 10px;
@@ -679,6 +680,8 @@
       if (item.regra) {
         const r = item.regra;
         if (r.inicio && d < deChave(r.inicio)) return false;
+        if (r.fim && d > deChave(r.fim)) return false;                 // "excluir este e os próximos"
+        if (item.excecoes && item.excecoes.includes(chave(d))) return false; // "excluir só este dia"
         if (r.semanal) return r.semanal.includes(d.getDay());
         if (r.intervalo) {
           const passo = r.intervalo * (r.unidade === 'semana' ? 7 : 1);
@@ -703,6 +706,11 @@
     function duracaoDe(item) { return item.duracao || DURACAO_PADRAO[item.tipo]; }
 
     function textoRegra(r) {
+      const texto = textoRepeticao(r);
+      return r.fim ? `${texto} até ${fmtDiaCurto(deChave(r.fim))}` : texto;
+    }
+
+    function textoRepeticao(r) {
       if (r.semanal) {
         const s = r.semanal;
         if (s.length === 7) return 'Todo dia';
@@ -900,9 +908,21 @@
           </div>`;
       }
       if (tela.painel === 'excluir') {
+        if (item.regra) {
+          return `
+            <div class="painel">
+              <p>Este item se repete. O que excluir?</p>
+              <div class="botoes coluna">
+                <button class="btn falha" type="button" data-acao="excluir-um">Só este dia</button>
+                <button class="btn falha" type="button" data-acao="excluir-futuros">Este e os próximos</button>
+                <button class="btn falha" type="button" data-acao="excluir-sim">Todos, inclusive o histórico</button>
+                <button class="btn" type="button" data-acao="voltar">Cancelar</button>
+              </div>
+            </div>`;
+        }
         return `
           <div class="painel">
-            <p>${item.regra ? 'Excluir este item e todas as repetições dele? O histórico dele também é apagado.' : 'Excluir este item?'}</p>
+            <p>Excluir este item?</p>
             <div class="botoes">
               <button class="btn falha" type="button" data-acao="excluir-sim">Excluir</button>
               <button class="btn" type="button" data-acao="voltar">Cancelar</button>
@@ -1710,6 +1730,19 @@
       avisar(`Movido para ${rotuloDia(nova)}.`);
     }
 
+    function excluirItem(item) {
+      itens.splice(itens.indexOf(item), 1);
+      for (const chaveEstado of Object.keys(estados)) {
+        if (chaveEstado === item.id || chaveEstado.startsWith(`${item.id}|`)) delete estados[chaveEstado];
+      }
+    }
+
+    function fecharDepoisDeExcluir() {
+      tela.aberto = null;
+      tela.painel = 'acoes';
+      if (tela.fluxo && tela.fluxo.tipo === 'item') tela.fluxo = null;
+    }
+
     function usarPlanoB(item, d) {
       const p = item.planoB;
       let alvo = somarDias(d || HOJE, 1);
@@ -1858,14 +1891,26 @@
         case 'desfazer': delete estados[k]; tela.painel = 'acoes'; break;
         case 'editar': abrirForm(item); tela.painel = 'acoes'; break;
         case 'excluir': tela.painel = 'excluir'; break;
-        case 'excluir-sim':
-          itens.splice(itens.indexOf(item), 1);
+        case 'excluir-um':
+          item.excecoes = [...(item.excecoes || []), chave(d)];
+          delete estados[k];
+          fecharDepoisDeExcluir();
+          avisar(`Excluído só ${rotuloDia(d)}.`);
+          break;
+        case 'excluir-futuros':
+          // Se for a primeira ocorrência, não sobra nada: é o mesmo que excluir tudo.
+          if (d <= deChave(item.regra.inicio)) { excluirItem(item); fecharDepoisDeExcluir(); avisar('Item excluído.'); break; }
+          item.regra.fim = chave(somarDias(d, -1));
           for (const chaveEstado of Object.keys(estados)) {
-            if (chaveEstado === item.id || chaveEstado.startsWith(`${item.id}|`)) delete estados[chaveEstado];
+            const [id, dia] = chaveEstado.split('|');
+            if (id === item.id && dia && deChave(dia) >= d) delete estados[chaveEstado];
           }
-          tela.aberto = null;
-          tela.painel = 'acoes';
-          if (tela.fluxo && tela.fluxo.tipo === 'item') tela.fluxo = null;
+          fecharDepoisDeExcluir();
+          avisar(`Repetição encerrada. O último dia foi ${rotuloDia(somarDias(d, -1))}.`);
+          break;
+        case 'excluir-sim':
+          excluirItem(item);
+          fecharDepoisDeExcluir();
           avisar('Item excluído.');
           break;
         case 'mover': mover(item, d, somarDias(HOJE, Number(alvo.dataset.dias))); tela.painel = 'acoes'; break;
@@ -2133,6 +2178,9 @@
       if ($('f-notas').value.trim()) item.notas = $('f-notas').value.trim();
 
       if (antigo) {
+        // Mantém o fim da repetição e os dias excluídos ao editar.
+        if (antigo.regra && item.regra && antigo.regra.fim) item.regra.fim = antigo.regra.fim;
+        if (antigo.excecoes && item.regra) item.excecoes = antigo.excecoes;
         itens[itens.indexOf(antigo)] = item;
         fecharForm();
         avisar('Alterações salvas.');
