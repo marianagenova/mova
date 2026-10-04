@@ -17,7 +17,11 @@ webpush.setVapidDetails(
   Deno.env.get('VAPID_PRIVATE_KEY')!,
 );
 
-const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+const CHAVE_SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabase = createClient(Deno.env.get('SUPABASE_URL')!, CHAVE_SERVICO);
+// Botões "Feito" e "Adiar 15 min" do aviso chamam esta função, sem abrir o app.
+const URL_MARCAR = `${Deno.env.get('SUPABASE_URL')}/functions/v1/marcar-aviso`;
+const CHAVE_PUBLICA = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 const FUSO = 'America/Sao_Paulo';
 const TOLERANCIA = 10; // minutos: se o agendamento atrasar, o aviso ainda sai
@@ -36,8 +40,18 @@ type Dados = {
   itens: Item[];
   estados: Record<string, { estado: string }>;
   trilha?: { titulo: string; status: string }[];
+  ultimoBackup?: string | null;
+  criadoEm?: string;
 };
-type Aviso = { chave: string; titulo: string; texto: string };
+// "item" (item|dia|minutos antes) liga os botões Feito e Adiar no aviso.
+type Aviso = { chave: string; titulo: string; texto: string; item?: string };
+
+// Assinatura conferida pela função marcar-aviso (HMAC-SHA256 com a chave de serviço).
+async function assinar(texto: string) {
+  const chave = await crypto.subtle.importKey('raw', new TextEncoder().encode(CHAVE_SERVICO), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const bytes = new Uint8Array(await crypto.subtle.sign('HMAC', chave, new TextEncoder().encode(texto)));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 
 // ---------- Datas (chaves "aaaa-mm-dd", contadas em UTC para não depender do fuso) ----------
 function agoraNoFuso() {
@@ -108,7 +122,8 @@ function avisosDeAgora(dados: Dados, hoje: string, agora: number): Aviso[] {
       const partes = [`${item.titulo} às ${fmtHora(item.hora)}${antes ? ` (${quandoAntes(antes)})` : ''}`];
       if (item.tipo === 'estudo' && estudo) partes.push(estudo);
       if (item.local) partes.push(item.local);
-      avisos.push({ chave: `${item.id}|${dia}|${antes}`, titulo: 'Mova', texto: partes.join(' · ') });
+      const chave = `${item.id}|${dia}|${antes}`;
+      avisos.push({ chave, titulo: 'Mova', texto: partes.join(' · '), item: chave });
     }
   }
 
@@ -127,12 +142,34 @@ function avisosDeAgora(dados: Dados, hoje: string, agora: number): Aviso[] {
       linhas.push('Nada planejado.');
     }
     if (!dados.estados?.[`fechamento|${hoje}`]) linhas.push('Falta fechar o dia de hoje.');
+    // Backup: depois de 30 dias sem exportar, lembra aos domingos.
+    const ultimo = dados.ultimoBackup || dados.criadoEm;
+    const semBackup = ultimo ? diferencaDias(ultimo, hoje) : 0;
+    if (semBackup >= 30 && paraData(hoje).getUTCDay() === 0) {
+      linhas.push(`Faz ${semBackup} dias sem backup: engrenagem › Exportar backup.`);
+    }
     avisos.push({ chave: `resumo|${hoje}`, titulo: `Amanhã (${DIAS[paraData(amanha).getUTCDay()]})`, texto: linhas.join('\n') });
   }
   return avisos;
 }
 
 function fmtHora(h: string) { return fmtMin(minutos(h)); }
+
+// Avisos adiados pelo botão "Adiar 15 min" que já chegaram na hora.
+async function avisosAdiados(dados: Dados, usuario: string): Promise<Aviso[]> {
+  const { data: linhas } = await supabase.from('avisos_adiados').select('id, chave')
+    .eq('user_id', usuario).lte('quando', new Date().toISOString());
+  if (!linhas?.length) return [];
+  await supabase.from('avisos_adiados').delete().in('id', linhas.map((l: { id: number }) => l.id));
+  const avisos: Aviso[] = [];
+  for (const { id, chave } of linhas) {
+    const [itemId, dia] = chave.split('|');
+    const item = (dados.itens || []).find((i) => i.id === itemId);
+    if (!item?.hora || estadoDe(dados, item, dia)) continue; // já marcado ou excluído
+    avisos.push({ chave: `adiado|${id}`, titulo: 'Mova', texto: `${item.titulo} às ${fmtHora(item.hora)} (adiado)`, item: chave });
+  }
+  return avisos;
+}
 
 // ---------- Envio ----------
 Deno.serve(async () => {
@@ -142,7 +179,8 @@ Deno.serve(async () => {
 
   let enviados = 0;
   for (const conta of contas || []) {
-    const avisos = avisosDeAgora(conta.dados as Dados, hoje, agora);
+    const dados = conta.dados as Dados;
+    const avisos = [...avisosDeAgora(dados, hoje, agora), ...await avisosAdiados(dados, conta.user_id)];
     if (!avisos.length) continue;
     const { data: inscricoes } = await supabase.from('inscricoes_push').select('endpoint, inscricao').eq('user_id', conta.user_id);
     if (!inscricoes?.length) continue;
@@ -154,7 +192,11 @@ Deno.serve(async () => {
         .select();
       if (!novo?.length) continue;
 
-      const payload = JSON.stringify({ title: aviso.titulo, body: aviso.texto });
+      const acao = aviso.item ? {
+        url: URL_MARCAR, apikey: CHAVE_PUBLICA, usuario: conta.user_id, chave: aviso.item,
+        token: await assinar(`${conta.user_id}|${aviso.item}`),
+      } : undefined;
+      const payload = JSON.stringify({ title: aviso.titulo, body: aviso.texto, acao });
       for (const { endpoint, inscricao } of inscricoes) {
         try {
           // urgency "high" pede ao Android para entregar mesmo com o aparelho em economia de bateria.

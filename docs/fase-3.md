@@ -32,3 +32,17 @@ No app: engrenagem > **Ativar avisos neste celular** > **Permitir**.
 - [ ] Avisos ligados no celular
 - [ ] Um item de teste com "Na hora" avisa no horário
 - [ ] O resumo das 20h chega
+
+## Botões no aviso e lembrete de backup
+
+- O aviso de cada item vem com os botões **Feito** e **Adiar 15 min**. Eles chamam a função `marcar-aviso` sem abrir o app:
+  - **Feito** marca a ocorrência em `dados_app` (gravando só se a versão não mudou no meio);
+  - **Adiar 15 min** guarda o aviso em `avisos_adiados`, e a `enviar-avisos` manda de novo na hora (se ainda não foi marcado).
+- Cada aviso leva uma assinatura (HMAC com a chave de serviço) feita pela `enviar-avisos` e conferida pela `marcar-aviso`.
+- Aos domingos, depois de 30 dias sem exportar o backup, o resumo das 20h lembra de exportar.
+
+### Passo a passo
+
+1. Em **SQL Editor > New query**, cole [`supabase/migrations/003_avisos_adiados.sql`](../supabase/migrations/003_avisos_adiados.sql) e clique em **Run**.
+2. Em **Edge Functions > Deploy a new function > Via Editor**, crie `marcar-aviso` com o conteúdo de [`supabase/functions/marcar-aviso/index.ts`](../supabase/functions/marcar-aviso/index.ts).
+3. Na função `enviar-avisos`, aba **Code**, troque o código pelo de [`supabase/functions/enviar-avisos/index.ts`](../supabase/functions/enviar-avisos/index.ts) e clique em **Deploy updates**.
