@@ -1064,8 +1064,9 @@
     }
 
     // ============ Aba Dia ============
-    function rotinaDaManha(d) {
-      return itensDoDia(d, false).filter((i) => i.hora && !i.diaTodo && minutos(i.hora) < 9 * 60);
+    // Passo a passo do dia: todos os itens com horário, em ordem.
+    function passosDoDia(d) {
+      return itensDoDia(d, false).filter((i) => i.hora && !i.diaTodo);
     }
 
     function htmlAgora() {
@@ -1157,17 +1158,17 @@
 
       if (ehHoje) html += htmlAgora();
 
-      const rotina = rotinaDaManha(d);
+      const rotina = passosDoDia(d);
       if (rotina.length >= 2) {
         const feitos = rotina.filter((i) => estadoDe(i, d)).length;
         const ultimo = rotina[rotina.length - 1];
         html += `
           <div class="card">
-            <h3>Rotina da manhã</h3>
+            <h3>Passo a passo do dia</h3>
             <p><strong>${rotina.length} passos</strong> · ${fmtHora(rotina[0].hora)} às ${fmtMin(minutos(ultimo.hora) + duracaoDe(ultimo))}</p>
             <p class="sub">${rotina.map((i) => esc(i.titulo)).join(' → ')}</p>
             <div class="botoes">${feitos === rotina.length
-              ? '<span class="sub">Rotina concluída.</span>'
+              ? '<span class="sub">Todos os passos do dia decididos.</span>'
               : `<button class="btn principal" type="button" data-acao="fluxo-abrir" data-fluxo="rotina">${feitos ? `Continuar (${feitos} de ${rotina.length} feitos)` : 'Fazer passo a passo'}</button>`}
             </div>
           </div>`;
@@ -1545,7 +1546,7 @@
 
     function fluxoRotina(f) {
       const d = deChave(f.dia);
-      const passos = rotinaDaManha(d);
+      const passos = passosDoDia(d);
       const atual = passos.find((i) => !estadoDe(i, d) && !f.pulados.has(i.id));
       const idx = atual ? passos.indexOf(atual) : passos.length;
       if (atual) { tela.aberto = `${atual.id}|${f.dia}`; }
@@ -1554,14 +1555,14 @@
         return `<li class="${i === atual ? 'atual' : ''} ${e ? 'ok' : ''}"><span>${fmtHora(i.hora)}</span><span>${esc(i.titulo)}${e ? ' · ' + textoEstado(e).toLowerCase() : f.pulados.has(i.id) ? ' · pulado' : ''}</span></li>`;
       }).join('');
       return `
-        <div class="passos-topo"><span>Rotina da manhã · ${fmtDiaCurto(d)}</span><button class="btn" type="button" data-acao="fluxo-fechar">Fechar</button></div>
+        <div class="passos-topo"><span>Passo a passo · ${fmtDiaCurto(d)}</span><button class="btn" type="button" data-acao="fluxo-fechar">Fechar</button></div>
         ${htmlProgresso(idx - 1, passos.length)}
         <div class="miolo">
           ${atual ? `
             <h2>Passo ${idx + 1} de ${passos.length}<small>${fmtHora(atual.hora)} · ${fmtDur(duracaoDe(atual))}</small></h2>
             <ul class="itens">${htmlItem(atual, d, 'dia', true)}</ul>
             <div class="botoes" style="margin-top:10px"><button class="btn" type="button" data-acao="rotina-pular" data-id="${atual.id}">Pular por agora</button></div>
-          ` : `<h2>Rotina terminada<small>${passos.filter((i) => estadoDe(i, d)?.estado === 'feito').length} de ${passos.length} feitos.</small></h2>
+          ` : `<h2>Dia terminado<small>${passos.filter((i) => estadoDe(i, d)?.estado === 'feito').length} de ${passos.length} feitos.</small></h2>
                ${f.pulados.size ? '<div class="botoes"><button class="btn" type="button" data-acao="rotina-rever">Voltar aos pulados</button></div>' : ''}`}
           <ul class="lista-passos">${lista}</ul>
         </div>`;

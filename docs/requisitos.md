@@ -102,7 +102,7 @@ Cada informação aparece em um lugar só:
 
 | Aba | Para que serve |
 |---|---|
-| Dia | Fazer o dia de hoje: agora, rotina, metas, linha do tempo e fechar o dia |
+| Dia | Fazer o dia de hoje: agora, passo a passo, metas, linha do tempo e fechar o dia |
 | Lista | Os próximos dias: para resolver, prazos chegando e os próximos 7 dias |
 | A encaixar | Tarefas sem dia para fazer |
 | Calendário | O mês e o que aconteceu em cada dia |
@@ -148,9 +148,9 @@ São marcadas na visão do dia ou no fechamento do dia, e é possível criar met
 - **Linha do tempo:** os itens desenhados nas horas do dia, mostrando os espaços livres. Itens que se sobrepõem ficam destacados, com um aviso. Tocar num bloco abre o item numa janela, com os detalhes e os botões de ação.
 - **Duração e carga do dia:** cada item tem uma duração estimada (com um padrão por tipo). O dia mostra o total planejado e aparece como "pesado" acima de 6 horas.
 
-### 4.11 Etapas e rotinas
+### 4.11 Etapas e passo a passo do dia
 - **Etapas dentro de uma tarefa:** uma tarefa pode ser dividida em etapas, e o app destaca a próxima. Quando todas são marcadas, a tarefa é concluída.
-- **Rotina da manhã passo a passo:** os itens do dia antes das 9h formam uma sequência, feita um passo de cada vez (feito, versão mínima, não fazer ou pular por agora).
+- **Passo a passo do dia:** todos os itens do dia com horário formam uma sequência, feita um passo de cada vez (feito, versão mínima, não fazer ou pular por agora). Não há separação entre manhã e tarde: o que importa é o dia.
 
 ### 4.12 Versão mínima e plano B
 - **Versão mínima:** um hábito, treino ou estudo pode ter uma versão para dia ruim (ex.: "10 minutos de leitura"). Ela conta como feita, mas aparece separada no histórico.
