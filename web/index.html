@@ -333,11 +333,16 @@
     .campo > .rotulo { font-size: 0.8125rem; font-weight: 700; color: var(--muted); }
     .campo .dica { font-size: 0.8125rem; color: var(--muted); margin: 0; }
     .campo-linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .campo input[type="date"], .campo input[type="time"], .campo input[type="number"], .campo input[type="text"], .campo select, .campo textarea {
+    .campo input[type="date"], .campo input[type="number"], .campo input[type="text"], .campo select, .campo textarea {
       padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card);
     }
     .campo input[type="text"], .campo textarea { width: 100%; }
     .campo input[type="number"] { width: 80px; }
+    .campo input.hora {
+      width: 96px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px;
+      background: var(--card); font-size: 1.0625rem; text-align: center; letter-spacing: 0.04em;
+    }
+    .campo input.hora:disabled { opacity: 0.5; }
     .opcao[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
     .mais { margin-top: 14px; background: none; border: 0; padding: 4px 0; color: var(--pessoal); font-weight: 700; }
     .msg { margin: 14px 0 0; border-radius: 10px; padding: 10px 12px; font-size: 0.875rem; }
@@ -429,7 +434,7 @@
           <span class="rotulo">Quando vou fazer (opcional)</span>
           <div class="campo-linha">
             <input type="date" id="f-quando-data">
-            <input type="time" id="f-quando-hora">
+            <input type="text" class="hora" id="f-quando-hora" inputmode="numeric" maxlength="5" placeholder="hh:mm" autocomplete="off">
           </div>
         </div>
         <div class="campo">
@@ -444,7 +449,7 @@
           <span class="rotulo" id="f-rotulo-data">Data e hora</span>
           <div class="campo-linha">
             <input type="date" id="f-data">
-            <input type="time" id="f-hora">
+            <input type="text" class="hora" id="f-hora" inputmode="numeric" maxlength="5" placeholder="hh:mm" autocomplete="off">
             <label class="chip" id="f-dia-todo-rotulo"><input type="checkbox" id="f-dia-todo"> Dia todo</label>
           </div>
         </div>
@@ -2093,6 +2098,29 @@
 
     function fecharForm() { $('fundo-novo').hidden = true; }
 
+    // Hora digitada: "1430", "14:30", "730" ou "7" viram "14:30", "07:30", "07:00".
+    // Devolve null se a hora não existir.
+    function normalizarHora(texto) {
+      const d = texto.replace(/\D/g, '');
+      if (!d || d.length > 4) return null;
+      const [h, m] = d.length <= 2 ? [d, '0'] : d.length === 3 ? [d.slice(0, 1), d.slice(1)] : [d.slice(0, 2), d.slice(2)];
+      if (Number(h) > 23 || Number(m) > 59) return null;
+      return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+    }
+
+    for (const id of ['f-hora', 'f-quando-hora']) {
+      // Enquanto digita: só números, com os dois pontos depois das horas.
+      $(id).addEventListener('input', (ev) => {
+        const d = ev.target.value.replace(/\D/g, '').slice(0, 4);
+        ev.target.value = d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d;
+      });
+      // Ao sair do campo: completa o formato (ex.: 7 → 07:00, 730 → 07:30).
+      $(id).addEventListener('blur', (ev) => {
+        const hora = normalizarHora(ev.target.value);
+        if (hora) ev.target.value = hora;
+      });
+    }
+
     $('btn-novo').addEventListener('click', () => abrirForm());
     $('f-cancelar').addEventListener('click', fecharForm);
     $('fundo-novo').addEventListener('click', (ev) => { if (ev.target === ev.currentTarget) fecharForm(); });
@@ -2129,18 +2157,26 @@
       const antigo = form.editando ? itens.find((i) => i.id === form.editando) : null;
       const item = { id: antigo ? antigo.id : novoId(), titulo, tipo: form.tipo, area: form.area };
 
+      const horaInvalida = 'Hora inválida. Digite assim: 14:30 (ou só 1430).';
       if (form.tipo === 'tarefa') {
         if ($('f-quando-data').value) item.data = $('f-quando-data').value;
-        if ($('f-quando-hora').value) {
+        if ($('f-quando-hora').value.trim()) {
+          const hora = normalizarHora($('f-quando-hora').value);
+          if (!hora) return erro(horaInvalida);
           if (!item.data) return erro('Escolha também o dia em "Quando vou fazer".');
-          item.hora = $('f-quando-hora').value;
+          item.hora = hora;
         }
         if ($('f-prazo').value) item.prazo = $('f-prazo').value;
       } else {
         const diaTodo = form.tipo === 'compromisso' && $('f-dia-todo').checked;
         if (!$('f-data').value) return erro('Escolha a data.');
-        if (!diaTodo && !$('f-hora').value) return erro(`Escolha a hora. Para ${TIPOS[form.tipo].toLowerCase()}, data e hora são obrigatórias.`);
-        if (diaTodo) item.diaTodo = true; else item.hora = $('f-hora').value;
+        if (!diaTodo && !$('f-hora').value.trim()) return erro(`Escolha a hora. Para ${TIPOS[form.tipo].toLowerCase()}, data e hora são obrigatórias.`);
+        if (diaTodo) item.diaTodo = true;
+        else {
+          const hora = normalizarHora($('f-hora').value);
+          if (!hora) return erro(horaInvalida);
+          item.hora = hora;
+        }
 
         const rep = $('f-repeticao').value;
         const inicio = $('f-data').value;

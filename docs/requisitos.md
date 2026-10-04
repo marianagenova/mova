@@ -83,6 +83,7 @@ Cadastrar um item novo deve ser fácil e rápido (hoje essa é a maior dor).
 - **Obrigatórios:** título, tipo e área. Data e hora são obrigatórias para compromisso e hábito. Em uma tarefa, prazo e "quando vou fazer" são opcionais; sem "quando vou fazer", ela vai para "A encaixar", tenha prazo ou não.
 - **Opcionais, com padrões prontos:** repetição e lembrete.
 - Tudo é classificado na hora do cadastro.
+- A hora é digitada direto, com o teclado de números (ex.: 1430 vira 14:30), sem o relógio do Android.
 
 ### 4.3 Marcar, não fazer e reagendar
 Cada item terá botões claros para:
