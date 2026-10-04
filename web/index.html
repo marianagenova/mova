@@ -1510,6 +1510,18 @@
             <div class="botoes"><button class="btn" type="button" data-acao="plano-editar">${planoTreino.trim() ? 'Editar o plano' : 'Escrever o plano'}</button></div>
           </div>`;
       }
+      // Nos dias com estudo, o que está em andamento na trilha.
+      const estudos = doDia.filter((i) => i.tipo === 'estudo');
+      if (estudos.length) {
+        const andamento = emAndamento();
+        const minima = estudos.find((i) => i.minima)?.minima;
+        html += `
+          <div class="card"><h3>${ehHoje ? 'Estudo de hoje' : 'Estudo do dia'}</h3>
+            ${andamento.length ? `<ul class="itens">${andamento.map((m) => htmlMaterial(m)).join('')}</ul>` : '<p class="sub">Nada em andamento na trilha.</p>'}
+            ${minima ? `<p class="sub" style="margin-top:8px">Versão mínima: ${esc(minima)}</p>` : ''}
+            <div class="botoes"><button class="btn" type="button" data-acao="trilha-abrir">Ver trilha ›</button></div>
+          </div>`;
+      }
       return html + '</div></div>';
     }
 
@@ -2651,6 +2663,7 @@
       'proximo-nao': () => { tela.fluxo = tela.fluxo.depois; },
       'material-novo': () => { tela.materialEditando = { titulo: '', autor: '', tipo: 'livro', tema: '', temaNovo: false }; window.scrollTo(0, 0); },
       'material-editar': (b) => {
+        if (tela.aba !== 'trilha') acoesGerais['trilha-abrir'](); // o formulário fica na tela da Trilha
         const m = trilha.find((x) => x.id === b.dataset.mid);
         tela.materialEditando = { id: m.id, titulo: m.titulo, autor: m.autor || '', tipo: m.tipo, tema: m.tema, temaNovo: false };
         window.scrollTo(0, 0);
