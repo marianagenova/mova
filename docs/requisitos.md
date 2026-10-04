@@ -63,6 +63,7 @@ Um único lugar para soltar tudo o que precisa ser feito (hábitos, tarefas, com
 - **A encaixar:** sem "quando vou fazer". Fica em uma lista própria, para não ser esquecida.
 - **Agendada:** com dia e hora escolhidos. Aparece no calendário como um bloco que pode ser movido.
 - **Com prazo:** mostra "vence em X dias". Uma tarefa pode ter prazo e também estar agendada.
+- **Prazo chegando:** uma tarefa com prazo e ainda sem "quando vou fazer" aparece também no topo da lista principal, na seção "Prazos chegando", a partir de 3 dias antes do prazo. Ela sai dali quando for agendada ou concluída.
 
 **Regra do "vencido":** só itens com prazo ficam vencidos (em vermelho). Uma tarefa agendada que não foi feita no dia planejado aparece como pendente, de forma neutra, e não como vencida.
 
@@ -74,11 +75,12 @@ Um único lugar para soltar tudo o que precisa ser feito (hábitos, tarefas, com
 - Estilo do Reminder da Samsung: itens um abaixo do outro, com datas claras e itens vencidos destacados.
 - Diferente do Reminder: cada item mostra sua área (cor) e seu tipo (ícone), em vez de tratar tudo da mesma forma.
 - Tarefas sem data ficam em uma lista "A encaixar"; tarefas com prazo mostram "vence em X dias"; só os itens com prazo vencido aparecem em vermelho.
+- No topo da lista, a seção "Prazos chegando" mostra as tarefas ainda não agendadas que vencem nos próximos 3 dias.
 - Filtros por área e por tipo **[proposta]**.
 
 ### 4.2 Cadastro rápido
 Cadastrar um item novo deve ser fácil e rápido (hoje essa é a maior dor).
-- **Obrigatórios:** título, tipo e área. Data e hora são obrigatórias para compromisso e hábito. Em uma tarefa, prazo e "quando vou fazer" são opcionais; sem nenhum dos dois, ela vai para "A encaixar".
+- **Obrigatórios:** título, tipo e área. Data e hora são obrigatórias para compromisso e hábito. Em uma tarefa, prazo e "quando vou fazer" são opcionais; sem "quando vou fazer", ela vai para "A encaixar", tenha prazo ou não.
 - **Opcionais, com padrões prontos:** repetição e lembrete.
 - Tudo é classificado na hora do cadastro.
 

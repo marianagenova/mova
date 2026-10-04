@@ -286,7 +286,7 @@
         <div class="campo">
           <span class="rotulo">Prazo (opcional)</span>
           <div class="campo-linha"><input type="date" id="f-prazo"></div>
-          <p class="dica">Sem nenhum dos dois, a tarefa vai para "A encaixar".</p>
+          <p class="dica">Sem "Quando vou fazer", a tarefa vai para "A encaixar". Se tiver prazo, ela também aparece no topo da lista 3 dias antes de vencer.</p>
         </div>
       </div>
 
@@ -629,11 +629,25 @@
         .sort((a, b) => (a.prazo || '9999').localeCompare(b.prazo || '9999'));
     }
 
+    // Tarefas ainda sem dia para fazer cujo prazo vence nos próximos dias.
+    const DIAS_PRAZO_CHEGANDO = 3;
+    function prazosChegando() {
+      return aEncaixar().filter((i) => {
+        if (!i.prazo || estados[i.id]) return false;
+        const n = diferencaDias(HOJE, deChave(i.prazo));
+        return n >= 0 && n <= DIAS_PRAZO_CHEGANDO;
+      });
+    }
+
     function renderLista() {
       let html = '';
       const resolver = paraResolver();
       if (resolver.length) {
         html += secao('Para resolver', resolver.map((i) => htmlItem(i, null, 'resolver')), 'resolver');
+      }
+      const chegando = prazosChegando();
+      if (chegando.length) {
+        html += secao('Prazos chegando · escolha um dia', chegando.map((i) => htmlItem(i, null, 'encaixar')));
       }
       for (let n = 0; n < 7; n++) {
         const d = somarDias(HOJE, n);
