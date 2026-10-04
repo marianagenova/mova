@@ -1384,11 +1384,12 @@
           <div class="botoes"><button class="btn ${fechado ? '' : 'principal'}" type="button" data-acao="fluxo-abrir" data-fluxo="fechamento">${fechado ? 'Rever o fechamento' : 'Fechar o dia'}</button></div>
         </div>`;
       if (HOJE.getDay() === 0) {
+        const planejado = Boolean(estados['planejamento|' + chave(HOJE)]);
         html += `
           <div class="card">
             <h3>Planejamento da semana</h3>
-            <p class="sub">Domingo é dia de planejar: como foi a semana, prazos, tarefas a encaixar e carga dos próximos dias.</p>
-            <div class="botoes"><button class="btn principal" type="button" data-acao="fluxo-abrir" data-fluxo="planejamento">Começar o planejamento</button></div>
+            <p class="sub">${planejado ? 'Planejamento concluído ✓ Você pode abrir de novo para ajustar.' : 'Domingo é dia de planejar: como foi a semana, prazos, tarefas a encaixar e carga dos próximos dias.'}</p>
+            <div class="botoes"><button class="btn ${planejado ? '' : 'principal'}" type="button" data-acao="fluxo-abrir" data-fluxo="planejamento">${planejado ? 'Rever o planejamento' : 'Começar o planejamento'}</button></div>
           </div>`;
       }
       return html;
@@ -2545,7 +2546,11 @@
         tela.fluxo = null;
         avisar('Dia fechado. O registro aparece no calendário e no histórico.');
       },
-      'planejamento-concluir': () => { tela.fluxo = null; avisar('Planejamento da semana concluído.'); },
+      'planejamento-concluir': () => {
+        estados['planejamento|' + chave(HOJE)] = { estado: 'feito' };
+        tela.fluxo = null;
+        avisar('Planejamento da semana concluído.');
+      },
       'meta-marcar': (b) => {
         const k = `${b.dataset.meta}|${b.dataset.dia}`;
         const v = b.dataset.valor;
