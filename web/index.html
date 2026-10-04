@@ -921,7 +921,7 @@
       if (e.estado === 'feito') return e.minima ? 'Feito na versão mínima' : 'Feito';
       if (e.estado === 'nao' && e.planoB) return `Não fez · plano B marcado${motivo}`;
       if (e.estado === 'nao') return (e.conta === 'falha' ? 'Não fez · conta como falha' : 'Não fez · neutro') + motivo;
-      if (e.estado === 'reagendado') return `Reagendado para ${rotuloDia(deChave(e.para))}`;
+      if (e.estado === 'reagendado') return e.encaixar ? 'Foi para A encaixar' : `Reagendado para ${rotuloDia(deChave(e.para))}`;
       return '';
     }
 
@@ -1137,6 +1137,8 @@
               <button class="btn falha" type="button" data-acao="falha">Falha</button>
               <button class="btn" type="button" data-acao="neutro">Neutro</button>
             </div>
+            <div class="botoes"><button class="btn" type="button" data-acao="encaixar-depois">Encaixar depois</button></div>
+            <p>"Encaixar depois" manda para a aba A encaixar e não conta como falha.</p>
             <div class="botoes gerenciar"><button class="link" type="button" data-acao="voltar">Cancelar</button></div>
           </div>`;
       }
@@ -2223,7 +2225,7 @@
       if (f.fim && !estadoDe(item, d)) { f.fim = false; f.anterior = null; }
       const topo = `<div class="passos-topo"><span>${fmtDiaLongo(d)}</span><button class="btn" type="button" data-acao="fluxo-fechar">Fechar</button></div>`;
       const anterior = f.anterior
-        ? `<p class="anterior">✓ ${esc(f.anterior.titulo)}: ${esc(f.anterior.texto.toLowerCase())}</p>`
+        ? `<p class="anterior">✓ ${esc(f.anterior.titulo)}: ${esc(f.anterior.texto.charAt(0).toLowerCase() + f.anterior.texto.slice(1))}</p>`
         : '';
       if (f.fim) {
         return `${topo}${anterior}
@@ -2468,6 +2470,22 @@
       }
       tela.aberto = null;
       avisar(`Agendado para ${rotuloDia(nova)}${hora ? ' às ' + fmtHora(hora) : ''}.`);
+    }
+
+    // "Encaixar depois": a ocorrência vai para A encaixar, sem dia nem hora.
+    // Se o item se repete, vai uma cópia só deste dia; os outros dias seguem normais.
+    function encaixarDepois(item, d) {
+      const { id, regra, excecoes, data, hora, ate, horaFim, diaTodo, lembrete, reagendadoDe, ...resto } = item;
+      if (item.regra) {
+        estados[chaveOcorrencia(item, d)] = { estado: 'reagendado', encaixar: true, motivo: tela.motivo };
+        itens.push({ ...resto, id: novoId(), tipo: 'tarefa', reagendadoDe: chave(d) });
+      } else {
+        for (const campo of ['data', 'hora', 'ate', 'horaFim', 'diaTodo', 'lembrete']) delete item[campo];
+        item.tipo = 'tarefa';
+        item.reagendadoDe = data || null;
+        delete estados[item.id];
+      }
+      avisar('Foi para A encaixar.');
     }
 
     function excluirItem(item) {
@@ -2781,6 +2799,7 @@
         case 'voltar': tela.painel = 'acoes'; break;
         case 'falha': estados[k] = { estado: 'nao', conta: 'falha', motivo: tela.motivo }; tela.aberto = null; tela.painel = 'acoes'; break;
         case 'neutro': estados[k] = { estado: 'nao', conta: 'neutro', motivo: tela.motivo }; tela.aberto = null; tela.painel = 'acoes'; break;
+        case 'encaixar-depois': encaixarDepois(item, d); tela.aberto = null; tela.painel = 'acoes'; break;
         case 'desfazer': delete estados[k]; tela.painel = 'acoes'; break;
         case 'editar': abrirForm(item); tela.painel = 'acoes'; break;
         case 'excluir': tela.painel = 'excluir'; break;
