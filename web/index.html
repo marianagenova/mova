@@ -563,17 +563,20 @@
         </div>
       </div>
 
-      <div class="campo">
-        <span class="rotulo">Lembrete</span>
+      <div class="campo" id="f-campo-lembrete">
+        <span class="rotulo">Lembrete no celular</span>
         <div class="campo-linha">
           <select id="f-lembrete">
-            <option>Na hora</option>
-            <option>10 minutos antes</option>
-            <option>1 hora antes</option>
-            <option>1 dia antes</option>
-            <option>Sem lembrete</option>
+            <option value="sem">Sem lembrete</option>
+            <option value="0">Na hora</option>
+            <option value="5">5 minutos antes</option>
+            <option value="15">15 minutos antes</option>
+            <option value="30">30 minutos antes</option>
+            <option value="60">1 hora antes</option>
+            <option value="1440">1 dia antes</option>
           </select>
         </div>
+        <p class="dica" id="f-lembrete-dica" hidden>Só avisa itens com horário.</p>
       </div>
 
       <button class="mais" type="button" id="f-mais">+ Mais detalhes (duração, etapas, local…)</button>
@@ -665,6 +668,22 @@
     const TIPOS = { tarefa: 'Tarefa', compromisso: 'Compromisso', treino: 'Treino', estudo: 'Estudo' };
     const AREAS = { pessoal: 'Pessoal', trabalho: 'Trabalho' };
     const DURACAO_PADRAO = { tarefa: 30, compromisso: 60, treino: 60, estudo: 30 };
+    // Lembrete no celular, em minutos antes do horário (null: sem lembrete).
+    // Item salvo antes de existir o campo usa o padrão do tipo. A mesma regra está na
+    // função enviar-avisos do Supabase.
+    const LEMBRETE_PADRAO = { tarefa: 0, compromisso: 30, treino: 15, estudo: 15 };
+    function lembreteDe(item) {
+      if ('lembrete' in item) return item.lembrete;
+      if (!item.hora || item.diaTodo) return null;
+      return LEMBRETE_PADRAO[item.tipo] ?? null;
+    }
+    function textoLembrete(min) {
+      if (min === null) return 'Sem lembrete';
+      if (min === 0) return 'Na hora';
+      if (min === 60) return '1 hora antes';
+      if (min === 1440) return '1 dia antes';
+      return `${min} minutos antes`;
+    }
     const MOTIVOS = ['Cansaço', 'Imprevisto', 'Trabalho', 'Saúde', 'Esqueci', 'Outro'];
     const ENERGIA = ['muito baixa', 'baixa', 'média', 'boa', 'muito boa'];
     const LIMITE_DIA_PESADO = 6 * 60;
@@ -1059,6 +1078,7 @@
       if (item.notas) linhas.push(['Notas', item.notas]);
       if (item.minima) linhas.push(['Versão mínima', item.minima]);
       if (item.planoB) linhas.push(['Plano B', item.planoB.texto]);
+      if (item.hora && !item.diaTodo) linhas.push(['Lembrete', textoLembrete(lembreteDe(item))]);
       let html = linhas.length
         ? `<dl class="detalhes">${linhas.map(([r, v]) => `<dt>${r}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`
         : '';
@@ -1857,6 +1877,7 @@
           <span style="width:72px"></span>
         </div>
         <div class="colunas"><div class="col">
+        ${htmlAvisos()}
         <section class="secao"><h2><span>Trilha de estudos</span></h2>
           <div class="card" style="margin-top:0">
             <p class="sub">${emAndamento().length} em andamento · ${naFila().length} na fila</p>
@@ -2510,7 +2531,15 @@
         tela.fluxo = { tipo: 'planejamento', passo: 4, dia: chave(HOJE) };
       },
       'novo-no-dia': (b) => abrirForm(null, b.dataset.dia),
-      'ajustes-abrir': () => { if (tela.aba !== 'ajustes') tela.abaAnterior = tela.aba; tela.aba = 'ajustes'; tela.aberto = null; window.scrollTo(0, 0); },
+      'ajustes-abrir': () => {
+        if (tela.aba !== 'ajustes') tela.abaAnterior = tela.aba;
+        tela.aba = 'ajustes';
+        tela.aberto = null;
+        window.scrollTo(0, 0);
+        acaoAvisos(verificarAvisos);
+      },
+      'avisos-ativar': () => acaoAvisos(ativarAvisos),
+      'avisos-desligar': () => acaoAvisos(desligarAvisos),
       'ajustes-voltar': () => { tela.aba = tela.abaAnterior || 'dia'; tela.modeloEditando = null; window.scrollTo(0, 0); },
       'modelo-novo': () => { tela.modeloEditando = { nome: '', tipo: 'compromisso', area: 'pessoal', titulo: '', dias: '', extras: [] }; },
       'modelo-editar': (b) => { tela.modeloEditando = copiaParaEditar(modelos.find((m) => m.id === b.dataset.id)); },
@@ -2811,6 +2840,9 @@
       $('f-ate-hora').disabled = $('f-hora').disabled;
       $('f-campo-minima').hidden = !recorrivel;
       $('f-campo-planob').hidden = !recorrivel;
+      // Enquanto não for escolhido à mão, o lembrete acompanha o tipo.
+      if (!form.lembreteManual) $('f-lembrete').value = String(LEMBRETE_PADRAO[form.tipo]);
+      $('f-lembrete-dica').hidden = !tarefa;
       $('f-detalhes').hidden = !form.detalhes;
       $('f-mais').textContent = form.detalhes ? '− Menos detalhes' : '+ Mais detalhes (duração, etapas, local…)';
 
@@ -2865,6 +2897,7 @@
       form.modelo = null;
       form.detalhes = false;
       form.editando = item ? item.id : null;
+      form.lembreteManual = Boolean(item); // na edição, mantém o lembrete do item
       form.diasManual = Boolean(item?.regra?.semanal); // na edição, mantém os dias já escolhidos
       $('form-novo').reset();
       $('f-data').value = dia || chave(HOJE);
@@ -2897,6 +2930,8 @@
           $('f-intervalo-unidade').value = r.unidade;
         }
         $('f-duracao').value = item.duracao || '';
+        const lembrete = 'lembrete' in item ? item.lembrete : LEMBRETE_PADRAO[item.tipo];
+        $('f-lembrete').value = lembrete === null ? 'sem' : String(lembrete);
         $('f-etapas').value = (item.etapas || []).map((x) => x.texto).join('\n');
         $('f-minima').value = item.minima || '';
         $('f-planob').value = item.planoB ? item.planoB.texto : '';
@@ -2968,6 +3003,7 @@
       if ((ev.target.id === 'f-data' || ev.target.id === 'f-quando-data') && ev.target.value && !form.diasManual) {
         form.dias = new Set([deChave(ev.target.value).getDay()]);
       }
+      if (ev.target.id === 'f-lembrete') form.lembreteManual = true;
       if (ev.target.id === 'f-data' && modeloDoForm()?.dias) {
         $('f-ate').value = chave(somarDias(deChave(ev.target.value), modeloDoForm().dias - 1));
       }
@@ -3049,6 +3085,7 @@
       }
 
       if (Number($('f-duracao').value) > 0) item.duracao = Number($('f-duracao').value);
+      item.lembrete = $('f-lembrete').value === 'sem' ? null : Number($('f-lembrete').value);
       const etapas = $('f-etapas').value.split('\n').map((x) => x.trim()).filter(Boolean);
       // Na edição, etapas com o mesmo texto continuam marcadas.
       const feitas = new Set((antigo?.etapas || []).filter((x) => x.feita).map((x) => x.texto));
@@ -3333,6 +3370,86 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') conferirServidor(); });
     window.addEventListener('online', () => { ultimaConferencia = 0; conferirServidor(); });
 
+    // ============ Avisos no celular (fase 3) ============
+    // O endereço de push deste aparelho fica na tabela inscricoes_push. A função
+    // enviar-avisos do Supabase, chamada a cada minuto, manda os lembretes para ele.
+    const avisos = { estado: 'verificando' }; // 'verificando' | 'ligado' | 'desligado' | 'bloqueado' | 'sem-suporte' | 'erro'
+
+    function urlBase64ParaBytes(b64) {
+      const base64 = (b64 + '='.repeat((4 - (b64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+      return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    }
+
+    async function inscricaoAtual() {
+      const registro = await navigator.serviceWorker.ready;
+      return registro.pushManager.getSubscription();
+    }
+
+    async function guardarInscricao(inscricao) {
+      await api('/rest/v1/inscricoes_push', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({ endpoint: inscricao.endpoint, user_id: sessao.userId, inscricao: inscricao.toJSON() }),
+      });
+    }
+
+    // Confere o estado e, se os avisos estão ligados, renova o endereço no servidor
+    // (o navegador pode trocá-lo de tempos em tempos).
+    async function verificarAvisos() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) { avisos.estado = 'sem-suporte'; return; }
+      if (Notification.permission === 'denied') { avisos.estado = 'bloqueado'; return; }
+      const inscricao = Notification.permission === 'granted' ? await inscricaoAtual() : null;
+      if (!inscricao || !sessao) { avisos.estado = 'desligado'; return; }
+      await guardarInscricao(inscricao);
+      avisos.estado = 'ligado';
+    }
+
+    async function ativarAvisos() {
+      const permissao = await Notification.requestPermission();
+      if (permissao !== 'granted') { avisos.estado = permissao === 'denied' ? 'bloqueado' : 'desligado'; return; }
+      const registro = await navigator.serviceWorker.ready;
+      const inscricao = await registro.pushManager.getSubscription() || await registro.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ParaBytes(SUPA.vapidPublicKey),
+      });
+      await guardarInscricao(inscricao);
+      avisos.estado = 'ligado';
+      avisar('Avisos ligados neste aparelho.');
+    }
+
+    async function desligarAvisos() {
+      const inscricao = await inscricaoAtual();
+      if (inscricao) {
+        await api(`/rest/v1/inscricoes_push?endpoint=eq.${encodeURIComponent(inscricao.endpoint)}`, { method: 'DELETE' });
+        await inscricao.unsubscribe();
+      }
+      avisos.estado = 'desligado';
+      avisar('Avisos desligados neste aparelho.');
+    }
+
+    // Roda uma ação dos avisos e redesenha quando terminar.
+    function acaoAvisos(acao) {
+      avisos.estado = 'verificando';
+      acao()
+        .catch((erro) => { console.warn('Avisos', erro); avisos.estado = 'erro'; })
+        .finally(() => { if (tela.aba === 'ajustes') render(); });
+    }
+
+    function htmlAvisos() {
+      const ativar = '<div class="botoes"><button class="btn principal" type="button" data-acao="avisos-ativar">Ativar avisos neste celular</button></div>';
+      const conteudo = {
+        verificando: '<p class="sub">Conferindo…</p>',
+        ligado: `<p><strong>Avisos ligados neste aparelho ✓</strong></p>
+          <p class="sub">Cada item avisa conforme o campo "Lembrete no celular". Às 20h chega o resumo do dia seguinte.</p>
+          <div class="botoes gerenciar"><button class="link" type="button" data-acao="avisos-desligar">Desligar avisos neste aparelho</button></div>`,
+        desligado: `<p class="sub">Avisos desligados neste aparelho.</p>${ativar}`,
+        bloqueado: '<p class="sub">As notificações do Mova estão bloqueadas neste aparelho. Para liberar: Configurações do celular › Notificações › Mova (ou Chrome) › Permitir. Depois volte aqui.</p>',
+        'sem-suporte': '<p class="sub">Este navegador não recebe avisos. No celular, use o Mova instalado na tela inicial.</p>',
+        erro: `<p class="sub">Não foi possível falar com o servidor. Confira a internet e tente de novo.</p>${ativar}`,
+      }[avisos.estado];
+      return `<section class="secao"><h2><span>Avisos</span></h2><div class="card" style="margin-top:0">${conteudo}</div></section>`;
+    }
+
     async function sairDaConta(mensagem = '') {
       const antiga = sessao;
       sessao = null;
@@ -3394,6 +3511,7 @@
       if (!SUPA.supabaseUrl) return;
       if (!sessao) { mostrarLogin(); return; }
       sincronizar().catch((erro) => console.warn('Sincronização adiada', erro));
+      verificarAvisos().catch((erro) => console.warn('Avisos', erro)); // renova o endereço de push no servidor
     }
   </script>
 </body>
