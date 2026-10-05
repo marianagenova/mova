@@ -2478,7 +2478,7 @@
       const { id, regra, excecoes, data, hora, ate, horaFim, diaTodo, lembrete, reagendadoDe, ...resto } = item;
       if (item.regra) {
         estados[chaveOcorrencia(item, d)] = { estado: 'reagendado', encaixar: true, motivo: tela.motivo };
-        itens.push({ ...resto, id: novoId(), tipo: 'tarefa', reagendadoDe: chave(d) });
+        itens.push({ ...resto, id: novoId(), tipo: 'tarefa', reagendadoDe: chave(d), origem: item.id });
       } else {
         for (const campo of ['data', 'hora', 'ate', 'horaFim', 'diaTodo', 'lembrete']) delete item[campo];
         item.tipo = 'tarefa';
@@ -2486,6 +2486,36 @@
         delete estados[item.id];
       }
       avisar('Foi para A encaixar.');
+    }
+
+    // Passado o dia, a tarefa que ficou sem marcação vai sozinha para A encaixar.
+    // Se ela se repete, vai uma cópia só (mesmo que tenha ficado para trás em vários dias)
+    // e não vai outra enquanto essa cópia estiver lá. Devolve quantas foram.
+    function encaixarAtrasados() {
+      const ontem = somarDias(HOJE, -1);
+      const inicio = dados.encaixadoAte ? somarDias(deChave(dados.encaixadoAte), 1) : deChave(dados.criadoEm || chave(ontem));
+      let quantas = 0;
+      for (const item of [...itens]) {
+        if (item.tipo !== 'tarefa') continue;
+        if (item.regra) {
+          let ultimo = null;
+          for (let d = inicio; d <= ontem; d = somarDias(d, 1)) {
+            if (!ocorreEm(item, d) || estadoDe(item, d)) continue;
+            estados[chaveOcorrencia(item, d)] = { estado: 'reagendado', encaixar: true };
+            ultimo = d;
+          }
+          if (!ultimo || itens.some((i) => i.origem === item.id && !i.data && !estados[i.id])) continue;
+          const { id, regra, excecoes, data, hora, ate, horaFim, diaTodo, lembrete, reagendadoDe, ...resto } = item;
+          itens.push({ ...resto, id: novoId(), reagendadoDe: chave(ultimo), origem: item.id });
+          quantas++;
+        } else if (item.data && !estados[item.id] && deChave(item.ate || item.data) <= ontem) {
+          item.reagendadoDe = item.data;
+          for (const campo of ['data', 'hora', 'ate', 'horaFim', 'diaTodo', 'lembrete']) delete item[campo];
+          quantas++;
+        }
+      }
+      dados.encaixadoAte = chave(ontem);
+      return quantas;
     }
 
     function excluirItem(item) {
@@ -3579,7 +3609,9 @@
     // O service worker permite instalar o app e receber notificações.
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
+    const encaixadas = encaixarAtrasados();
     render();
+    if (encaixadas) avisar(encaixadas === 1 ? '1 tarefa de dias passados foi para A encaixar.' : `${encaixadas} tarefas de dias passados foram para A encaixar.`);
     iniciarConta();
 
     function iniciarConta() {
