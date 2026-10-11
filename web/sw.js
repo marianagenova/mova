@@ -25,9 +25,10 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title || 'Mova', {
       body: `${data.body || ''}${sentAt}`.trim(),
       ...ICONES,
+      // url: página que o toque no aviso abre (ex.: o fechamento do dia).
+      data: { acao: data.acao, url: data.url },
       // Lembrete de item: botões para marcar sem abrir o app (fase 3).
       ...(data.acao ? {
-        data: { acao: data.acao },
         actions: [{ action: 'feito', title: 'Feito' }, { action: 'adiar', title: 'Adiar 15 min' }],
       } : {}),
     }),
@@ -53,6 +54,11 @@ self.addEventListener('notificationclick', (event) => {
   const acao = event.notification.data?.acao;
   if (event.action && acao) {
     event.waitUntil(responderAviso(acao, event.action));
+    return;
+  }
+  const url = event.notification.data?.url;
+  if (url) {
+    event.waitUntil(self.clients.openWindow(new URL(url, self.registration.scope).href));
     return;
   }
   event.waitUntil(

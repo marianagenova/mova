@@ -39,7 +39,8 @@ async function marcarFeito(usuario: string, itemId: string, dia: string) {
     const k = item.regra ? `${itemId}|${dia}` : itemId;
     dados.estados = dados.estados || {};
     if (dados.estados[k]) return 'já estava marcado';
-    dados.estados[k] = { estado: 'feito' };
+    // "em": o dia em que foi feito (o app novo mostra riscado nesse dia).
+    dados.estados[k] = { estado: 'feito', em: dia };
     const { data: gravou } = await supabase.from('dados_app')
       .update({ dados, versao: linha.versao + 1, atualizado_em: new Date().toISOString() })
       .eq('user_id', usuario).eq('versao', linha.versao)
