@@ -13,7 +13,7 @@
 // SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY o Supabase já fornece sozinho.
 //
 // As regras de repetição, o lembrete padrão e o que passa para o dia seguinte são os
-// mesmos de web/previa/index.html.
+// mesmos de web/index.html.
 
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'jsr:@supabase/supabase-js@2';

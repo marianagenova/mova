@@ -18,9 +18,9 @@ O app ficou com informação demais. A nova versão tem só três telas (**Hoje*
 
 Os dados são os mesmos do app anterior. O app novo grava `versaoApp: 2`, `inicioNovo`, `resumoManha`, `horasDoDia` e `enderecoApp`; a função `enviar-avisos` usa esses campos.
 
-## Em teste
+## Endereço
 
-O app novo está em `web/previa/` (https://marianagenova.github.io/mova/previa/). Enquanto isso, os avisos abrem a prévia (`enderecoApp: 'previa/'`).
+Testada em `web/previa/` e, desde 11/10/2026, no endereço principal (`web/index.html`). O endereço `/previa/` leva para o principal.
 
 ## Passo a passo no Supabase
 
