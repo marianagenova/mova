@@ -128,7 +128,6 @@
     .meta-linha { display: grid; gap: 6px; }
     .meta-linha .sub { color: var(--muted); font-size: 0.875rem; margin-top: 2px; }
     .meta-linha .btn { flex: 1; }
-    .meta-linha .numeros-meta .btn { flex: 1 0 40px; padding-inline: 0; }
     .meta-linha .btn.sim[aria-pressed="true"] { background: var(--verde); border-color: var(--verde); }
     .meta-linha .btn.nao[aria-pressed="true"] { background: #b5584d; border-color: #b5584d; }
     .meta-nova { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -616,19 +615,21 @@
     const htmlTema = (tema) => `<span class="tema" style="${corDoTema(tema)}">${esc(tema)}</span>`;
 
     // ============ Metas ============
-    const TIPO_META = { comecar: 'Quero mais disso', parar: 'Quero menos disso' };
-    const ROTULO_META = { parar: ['Evitei', 'Não evitei'], comecar: ['Fiz', 'Não fiz'] };
-    const porQuantidade = (m) => m.alvo !== undefined;
-    function cumpriu(m, v) {
-      if (v === undefined) return undefined;
-      if (!porQuantidade(m)) return v;
-      return m.tipo === 'comecar' ? v >= m.alvo : v <= m.alvo;
+    // Cada meta é uma pergunta de sim ou não, e "Sim" é sempre cumprir.
+    // Metas antigas (por quantidade, ou "quero menos disso") viram sim ou não uma vez só:
+    // cada dia já marcado fica como cumpriu (true) ou não (false).
+    for (const m of metas) {
+      if (m.alvo === undefined && !m.tipo) continue;
+      for (const k of Object.keys(marcas)) {
+        if (!k.startsWith(`${m.id}|`)) continue;
+        const v = marcas[k];
+        marcas[k] = m.alvo !== undefined ? (m.tipo === 'comecar' ? v >= m.alvo : v <= m.alvo) : Boolean(v);
+      }
+      delete m.alvo;
+      delete m.unidade;
+      delete m.tipo;
     }
-    function textoAlvo(m) {
-      if (!porQuantidade(m)) return '';
-      if (m.tipo === 'parar') return m.alvo === 0 ? `Meta: nenhum (${m.unidade}) por dia` : `Meta: no máximo ${m.alvo} ${m.unidade} por dia`;
-      return `Meta: pelo menos ${m.alvo} ${m.unidade} por dia`;
-    }
+    const cumpriu = (m, v) => v;
 
     // ============ Estado da tela ============
     const tela = {
@@ -906,21 +907,12 @@
       const k = chave(d);
       const linhas = metas.map((m) => {
         const v = marcas[`${m.id}|${k}`];
-        let botoes;
-        if (porQuantidade(m)) {
-          const c = cumpriu(m, v);
-          const maior = Math.max(5, m.alvo + 3);
-          botoes = `<div class="botoes numeros-meta">${Array.from({ length: maior + 1 }, (_, n) => `
-            <button class="btn ${v === n ? (c ? 'sim' : 'nao') : ''}" type="button" data-acao="meta-marcar" data-meta="${m.id}" data-dia="${k}" data-valor="${n}" aria-pressed="${v === n}">${n}</button>`).join('')}</div>`;
-        } else {
-          const [sim, nao] = ROTULO_META[m.tipo];
-          botoes = `<div class="botoes">
-            <button class="btn sim" type="button" data-acao="meta-marcar" data-meta="${m.id}" data-dia="${k}" data-valor="sim" aria-pressed="${v === true}">${sim}</button>
-            <button class="btn nao" type="button" data-acao="meta-marcar" data-meta="${m.id}" data-dia="${k}" data-valor="nao" aria-pressed="${v === false}">${nao}</button></div>`;
-        }
+        const botoes = `<div class="botoes">
+            <button class="btn sim" type="button" data-acao="meta-marcar" data-meta="${m.id}" data-dia="${k}" data-valor="sim" aria-pressed="${v === true}">Sim</button>
+            <button class="btn nao" type="button" data-acao="meta-marcar" data-meta="${m.id}" data-dia="${k}" data-valor="nao" aria-pressed="${v === false}">Não</button></div>`;
         return `
           <div class="meta-linha">
-            <div><strong>${esc(m.titulo)}</strong>${porQuantidade(m) ? `<div class="sub">${textoAlvo(m)}</div>` : ''}</div>
+            <div><strong>${esc(m.titulo)}</strong></div>
             ${comEdicao && tela.editarMetas
               ? `<div class="botoes">
                   <button class="btn" type="button" data-acao="meta-editar" data-meta="${m.id}">Editar</button>
@@ -933,21 +925,8 @@
       const nova = tela.novaMeta;
       const formNova = nova ? `
         <div class="meta-nova">
-          <input type="text" id="meta-titulo" placeholder="Ex.: Beber água" value="${esc(nova.titulo)}">
-          <div class="botoes">${Object.entries(TIPO_META).map(([v, nome]) => `
-            <button class="btn" type="button" data-acao="meta-tipo" data-valor="${v}" aria-pressed="${nova.tipo === v}">${nome}</button>`).join('')}</div>
-          ${nova.id
-            ? `<p class="sub">Marcada por ${nova.quantidade ? 'quantidade' : 'sim ou não'}.</p>`
-            : `<div class="botoes">
-                <button class="btn" type="button" data-acao="meta-medida" data-valor="simnao" aria-pressed="${!nova.quantidade}">Sim ou não</button>
-                <button class="btn" type="button" data-acao="meta-medida" data-valor="quantidade" aria-pressed="${nova.quantidade}">Quantidade</button></div>`}
-          ${nova.quantidade ? `
-            <div class="campo-linha">
-              ${nova.tipo === 'parar' ? 'No máximo' : 'Pelo menos'}
-              <input type="number" id="meta-alvo" min="0" value="${nova.alvo}" style="width:72px;padding:8px;border:1px solid var(--line);border-radius:10px">
-              <input type="text" id="meta-unidade" placeholder="copos, porções…" value="${esc(nova.unidade)}" style="flex:1">
-              por dia
-            </div>` : ''}
+          <input type="text" id="meta-titulo" placeholder="Ex.: Fiquei sem doces?" value="${esc(nova.titulo)}">
+          <p class="sub">Escreva como uma pergunta em que "Sim" é cumprir a meta.</p>
           <div class="botoes">
             <button class="btn principal" type="button" data-acao="meta-salvar">Salvar meta</button>
             <button class="btn" type="button" data-acao="meta-cancelar">Cancelar</button>
@@ -1338,14 +1317,14 @@
       'meta-marcar': (b) => {
         const k = `${b.dataset.meta}|${b.dataset.dia}`;
         const v = b.dataset.valor;
-        const valor = v === 'sim' ? true : v === 'nao' ? false : Number(v);
+        const valor = v === 'sim';
         if (marcas[k] === valor) delete marcas[k]; else marcas[k] = valor;
       },
       'metas-editar': () => { tela.editarMetas = !tela.editarMetas; },
-      'meta-nova': () => { tela.novaMeta = { titulo: '', tipo: 'comecar', quantidade: false, alvo: 1, unidade: '' }; },
+      'meta-nova': () => { tela.novaMeta = { titulo: '' }; },
       'meta-editar': (b) => {
         const m = metas.find((x) => x.id === b.dataset.meta);
-        tela.novaMeta = { id: m.id, titulo: m.titulo, tipo: m.tipo, quantidade: porQuantidade(m), alvo: m.alvo ?? 1, unidade: m.unidade || '' };
+        tela.novaMeta = { id: m.id, titulo: m.titulo };
       },
       'meta-excluir': (b) => {
         const meta = metas.find((m) => m.id === b.dataset.meta);
@@ -1354,19 +1333,12 @@
         for (const k of Object.keys(marcas)) if (k.startsWith(`${meta.id}|`)) delete marcas[k];
         if (!metas.length) tela.editarMetas = false;
       },
-      'meta-tipo': (b) => { tela.novaMeta.tipo = b.dataset.valor; },
-      'meta-medida': (b) => { tela.novaMeta.quantidade = b.dataset.valor === 'quantidade'; },
       'meta-cancelar': () => { tela.novaMeta = null; },
       'meta-salvar': () => {
         const n = tela.novaMeta;
         const titulo = n.titulo.trim();
-        if (!titulo) { avisar('Escreva o nome da meta.'); return; }
-        const meta = { id: n.id || `m${Date.now()}`, titulo, tipo: n.tipo };
-        if (n.quantidade) {
-          if (String(n.alvo).trim() === '' || !(Number(n.alvo) >= 0)) { avisar('Informe a quantidade da meta.'); return; }
-          meta.alvo = Number(n.alvo);
-          meta.unidade = n.unidade.trim() || 'vezes';
-        }
+        if (!titulo) { avisar('Escreva a meta.'); return; }
+        const meta = { id: n.id || `m${Date.now()}`, titulo };
         const antiga = metas.find((m) => m.id === n.id);
         if (antiga) metas[metas.indexOf(antiga)] = meta; else metas.push(meta);
         tela.novaMeta = null;
@@ -1503,8 +1475,6 @@
       if (t.id === 'marcar-hora' || t.id === 'resumo-hora') mascaraHora(t);
       if (t.id === 'marcar-hora') tela.marcarHora = t.value;
       if (t.id === 'meta-titulo') tela.novaMeta.titulo = t.value;
-      if (t.id === 'meta-alvo') tela.novaMeta.alvo = t.value;
-      if (t.id === 'meta-unidade') tela.novaMeta.unidade = t.value;
       if (tela.materialEditando && t.dataset.mat) tela.materialEditando[t.dataset.mat] = t.value;
     });
 
