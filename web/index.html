@@ -133,17 +133,23 @@
     .meta-linha .btn.nao[aria-pressed="true"] { background: #b5584d; border-color: #b5584d; }
     .meta-nova { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
     .meta-nova input { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
-    .metas-comp { display: grid; gap: 12px; }
-    .meta-comp { display: grid; gap: 6px; }
-    .barra-linha { display: flex; justify-content: space-between; gap: 8px; font-size: 0.875rem; }
+    /* Acompanhamento do mês: uma bolinha numerada por dia */
+    .acomp { display: grid; gap: 8px; padding-block: 12px; border-top: 1px solid var(--line); }
+    .acomp:first-child { border-top: 0; padding-top: 0; }
+    .barra-linha { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.9375rem; }
     .barra-linha small { color: var(--muted); }
-    .faixa-meta { display: flex; flex-wrap: wrap; gap: 3px; }
-    .faixa-meta i { width: 11px; height: 11px; border-radius: 3px; background: var(--line); }
-    .faixa-meta i.ok { background: var(--verde); }
-    .faixa-meta i.nao { background: #e9c3bd; }
-    .legenda { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.75rem; color: var(--muted); }
+    .bolinhas { display: grid; grid-template-columns: repeat(auto-fill, minmax(26px, 1fr)); gap: 4px; }
+    .bolinhas i {
+      aspect-ratio: 1; border-radius: 50%; border: 1.5px solid #c9c6c1; display: grid; place-items: center;
+      font-style: normal; font-size: 0.6875rem; color: var(--muted);
+    }
+    .bolinhas i.ok { background: var(--verde); border-color: var(--verde); color: #fff; font-weight: 700; }
+    .bolinhas i.nao { background: #f6dcd8; border-color: #e9c3bd; }
+    .bolinhas i.livre { border-style: dashed; border-color: var(--line); }
+    .bolinhas i.fora { border-color: var(--line); color: #c9c6c1; }
+    .legenda { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
     .legenda span { display: inline-flex; align-items: center; gap: 4px; }
-    .legenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+    .legenda i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 1.5px solid #c9c6c1; }
 
     /* Trilha */
     .material .num { width: 22px; text-align: right; color: var(--muted); font-size: 0.8125rem; font-weight: 700; flex: none; }
@@ -781,8 +787,9 @@
         html += secao('Durante o dia', semHora.map((x) => htmlItem(x)));
       }
       const fechado = estados['fechamento|' + K_HOJE];
-      html += `<div class="botoes" style="margin-top:20px;justify-content:center">
-        <button class="link" type="button" data-acao="fechar-dia" data-dia="${K_HOJE}">${fechado ? 'Rever o fechamento de hoje' : 'Fechar o dia'}</button></div>`;
+      html += `<div class="botoes gerenciar" style="margin-top:20px;justify-content:center">
+        <button class="link" type="button" data-acao="fechar-dia" data-dia="${K_HOJE}">${fechado ? 'Rever o fechamento de hoje' : 'Fechar o dia'}</button>
+        <button class="link" type="button" data-acao="acomp-abrir">Acompanhamento do mês</button></div>`;
       return html;
     }
 
@@ -849,10 +856,10 @@
             <p class="sub" style="margin-top:8px">Às 20h chega o aviso do fechamento do dia.</p>
           </div>
         </section>
-        <section class="secao"><h2>Metas</h2>
+        <section class="secao"><h2>Metas e acompanhamento</h2>
           <div class="card" style="margin-top:0">
-            <p class="sub">Você marca as metas no fechamento do dia. Aqui dá para ver como estão e mudar as metas.</p>
-            <div class="botoes"><button class="btn" type="button" data-acao="ir" data-aba="metas">Ver e editar as metas</button></div>
+            <p class="sub">Você marca as metas no fechamento do dia. Aqui dá para ver o mês (metas, estudo e exercício) e mudar as metas.</p>
+            <div class="botoes"><button class="btn" type="button" data-acao="acomp-abrir">Acompanhamento e metas</button></div>
           </div>
         </section>
         <section class="secao"><h2>Estudo e treino</h2>
@@ -876,18 +883,22 @@
 
     function renderMetas() {
       const m = tela.mesMetas;
-      const dias = [];
-      for (let d = new Date(m); d.getMonth() === m.getMonth() && d <= HOJE; d = somarDias(d, 1)) {
-        if (!dados.criadoEm || d >= deChave(dados.criadoEm)) dias.push(d);
-      }
       return `
-        <div class="nav-linha"><button class="btn" type="button" data-acao="ir" data-aba="ajustes">‹ Voltar</button><h2>Metas</h2><span style="width:72px"></span></div>
+        <div class="nav-linha"><button class="btn" type="button" data-acao="voltar-acomp">‹ Voltar</button><h2>Acompanhamento</h2><span style="width:72px"></span></div>
         <div class="nav-linha">
           <button class="btn" type="button" data-acao="mes-metas" data-passo="-1" aria-label="Mês anterior">‹</button>
           <h2 style="font-size:1rem">${maiuscula(MESES[m.getMonth()])} ${m.getFullYear()}</h2>
           <button class="btn" type="button" data-acao="mes-metas" data-passo="1" aria-label="Próximo mês">›</button>
         </div>
-        <div class="card">${dias.length ? htmlCompiladoMetas(dias) : '<p class="vazio">Nenhum dia neste mês.</p>'}</div>
+        <div class="card">
+          ${htmlAcompanhamento(m)}
+          <div class="legenda">
+            <span><i style="background:var(--verde);border-color:var(--verde)"></i>feito</span>
+            <span><i style="background:#f6dcd8;border-color:#e9c3bd"></i>meta não cumprida</span>
+            <span><i></i>sem marcar</span>
+            <span><i style="border-style:dashed;border-color:var(--line)"></i>não estava marcado</span>
+          </div>
+        </div>
         <section class="secao"><h2>Metas de hoje</h2><div class="card" style="margin-top:0">${htmlMetasDoDia(HOJE, true)}</div></section>`;
     }
 
@@ -949,31 +960,56 @@
       return `<div class="metas">${linhas || '<p class="vazio">Nenhuma meta ainda.</p>'}</div>${formNova}`;
     }
 
-    function htmlCompiladoMetas(dias) {
-      if (!metas.length) return '<p class="vazio">Nenhuma meta cadastrada.</p>';
-      return '<div class="metas-comp">' + metas.map((m) => {
-        let ok = 0;
-        let marcados = 0;
-        const celulas = dias.map((d) => {
-          const v = marcas[`${m.id}|${chave(d)}`];
-          const c = cumpriu(m, v);
-          if (v !== undefined) { marcados++; if (c) ok++; }
-          return `<i class="${c === true ? 'ok' : c === false ? 'nao' : ''}" title="${fmtDiaCurto(d)}${porQuantidade(m) && v !== undefined ? ': ' + v : ''}"></i>`;
-        }).join('');
-        const semMarcar = dias.length - marcados;
-        return `
-          <div class="meta-comp">
-            <div class="barra-linha"><span>${esc(m.titulo)}</span>
-              <span><strong>${ok} de ${dias.length}</strong> dias${semMarcar ? ` <small>(${semMarcar} sem marcar)</small>` : ''}</span></div>
-            <div class="faixa-meta">${celulas}</div>
-          </div>`;
-      }).join('') + `
-        <div class="legenda">
-          <span><i style="background:var(--verde)"></i>cumpriu</span>
-          <span><i style="background:#e9c3bd"></i>não cumpriu</span>
-          <span><i style="background:var(--line)"></i>sem marcar</span>
-        </div></div>`;
+    // ============ Acompanhamento do mês ============
+    // Uma linha para cada meta, para o estudo e para o exercício físico, com uma bolinha por dia.
+    // ok: cumpriu (ou fez); nao: meta não cumprida; livre: sem estudo ou treino marcado no dia;
+    // fora: dia que ainda não chegou (ou de antes do app).
+
+    // Estudo ou treino num dia: feito, marcado e não feito, ou nada marcado.
+    function situacaoTipo(tipo, d) {
+      const k = chave(d);
+      let marcado = false;
+      for (const item of itens) {
+        if (item.tipo !== tipo) continue;
+        const ocorre = ocorreEm(item, d);
+        const e = item.regra ? estados[`${item.id}|${k}`] : estados[item.id];
+        if (feito(e) && (e.em ? e.em === k : ocorre)) return 'ok';
+        if (ocorre) marcado = true;
+      }
+      return marcado ? '' : 'livre';
     }
+
+    function htmlAcompanhamento(mes) {
+      const inicio = dados.criadoEm ? deChave(dados.criadoEm) : null;
+      const dias = [];
+      for (let d = new Date(mes); d.getMonth() === mes.getMonth(); d = somarDias(d, 1)) dias.push(d);
+      const valido = (d) => d <= HOJE && (!inicio || d >= inicio);
+
+      const linhas = metas.map((m) => ({
+        titulo: m.titulo,
+        situacao: (d) => { const c = cumpriu(m, marcas[`${m.id}|${chave(d)}`]); return c === true ? 'ok' : c === false ? 'nao' : ''; },
+      }));
+      if (itens.some((i) => i.tipo === 'estudo')) linhas.push({ titulo: 'Estudo', situacao: (d) => situacaoTipo('estudo', d) });
+      if (itens.some((i) => i.tipo === 'treino')) linhas.push({ titulo: 'Exercício físico', situacao: (d) => situacaoTipo('treino', d) });
+      if (!linhas.length) return '<p class="vazio">Nada para acompanhar ainda. Crie uma meta abaixo.</p>';
+
+      return linhas.map((l) => {
+        let ok = 0;
+        let contam = 0;
+        const bolinhas = dias.map((d) => {
+          const s = valido(d) ? l.situacao(d) : 'fora';
+          if (s === 'ok') ok++;
+          if (s !== 'fora' && s !== 'livre') contam++;
+          return `<i class="${s}">${d.getDate()}</i>`;
+        }).join('');
+        return `
+          <div class="acomp">
+            <div class="barra-linha"><strong>${esc(l.titulo)}</strong><small>${ok} de ${contam} ${contam === 1 ? 'dia' : 'dias'}</small></div>
+            <div class="bolinhas">${bolinhas}</div>
+          </div>`;
+      }).join('');
+    }
+
 
     // ============ Trilha de estudos ============
     function htmlMaterial(m, numero = null, painel = null) {
@@ -1263,6 +1299,9 @@
     const acoesGerais = {
       'aba': (b) => { irPara(b.dataset.aba); tela.materialEditando = null; },
       'ir': (b) => irPara(b.dataset.aba),
+      // Acompanhamento do mês: aberto pela tela Hoje ou pelos Ajustes; o Voltar retorna para lá.
+      'acomp-abrir': () => { tela.acompVolta = tela.aba; tela.mesMetas = new Date(HOJE.getFullYear(), HOJE.getMonth(), 1); irPara('metas'); },
+      'voltar-acomp': () => irPara(tela.acompVolta || 'ajustes'),
       'ajustes-abrir': () => { if (!['ajustes', 'metas', 'treino', 'trilha'].includes(tela.aba)) tela.abaAnterior = tela.aba; irPara('ajustes'); acaoAvisos(verificarAvisos); },
       'voltar-aba': () => irPara(tela.abaAnterior || 'hoje'),
       'mes': (b) => {
