@@ -181,6 +181,10 @@
     .campo { margin-top: 14px; display: grid; gap: 6px; }
     .campo > .rotulo { font-size: 0.8125rem; font-weight: 700; color: var(--muted); }
     .campo .dica { font-size: 0.8125rem; color: var(--muted); margin: 0; }
+    .entendi { font-size: 0.8125rem; color: var(--verde); margin: 6px 0 0; font-weight: 600; }
+    .numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
+    .numero strong { display: block; font-size: 1.75rem; color: var(--verde); line-height: 1.1; }
+    .numero span { font-size: 0.8125rem; color: var(--muted); }
     .campo-linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .campo input[type="date"], .campo input[type="number"], .campo input[type="text"], .campo select, .campo textarea { padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
     .campo input[type="text"], .campo textarea { width: 100%; }
@@ -264,7 +268,8 @@
   <div class="fundo" id="fundo-novo" hidden>
     <form class="folha" id="form-novo" novalidate>
       <h2 id="f-cabecalho">Adicionar</h2>
-      <input class="titulo-input" id="f-titulo" placeholder="O que é?" autocomplete="off">
+      <input class="titulo-input" id="f-titulo" placeholder="O que é? Ex.: unhas sábado, dentista quinta 14h" autocomplete="off">
+      <p class="entendi" id="f-entendi" hidden></p>
 
       <div class="campo">
         <span class="rotulo">Quando</span>
@@ -1158,7 +1163,7 @@
     }
 
     // ============ Fechamento do dia e planejamento ============
-    const PASSOS = { fechamento: 3, planejamento: 3 };
+    const PASSOS = { fechamento: 3, planejamento: 4 };
     const htmlProgresso = (passo, total) => `<div class="progresso">${Array.from({ length: total }, (_, i) => `<i class="${i <= passo ? 'ok' : ''}"></i>`).join('')}</div>`;
 
     function renderFluxo() {
@@ -1218,9 +1223,45 @@
         ${rodapeFluxo(f, 'fechamento-concluir')}`;
     }
 
+    // Domingo, antes de planejar: só o que foi feito nos últimos 7 dias (nada do que faltou).
+    function htmlSuaSemana() {
+      const dias = Array.from({ length: 7 }, (_, n) => somarDias(HOJE, n - 6));
+      const inicio = chave(dias[0]);
+      const feitas = {};
+      let total = 0;
+      for (const [k, e] of Object.entries(estados)) {
+        if (!feito(e) || !e.em || e.em < inicio || e.em > K_HOJE) continue;
+        const item = itens.find((i) => i.id === k.split('|')[0]);
+        if (!item) continue;
+        feitas[item.titulo] = (feitas[item.titulo] || 0) + 1;
+        total++;
+      }
+      const numeros = [[total, total === 1 ? 'coisa feita' : 'coisas feitas']];
+      for (const [tipo, nome] of [['treino', 'exercício'], ['estudo', 'estudo']]) {
+        if (!itens.some((i) => i.tipo === tipo)) continue;
+        const n = dias.filter((d) => situacaoTipo(tipo, d) === 'ok').length;
+        numeros.push([n, `${n === 1 ? 'dia' : 'dias'} de ${nome}`]);
+      }
+      const metasOk = metas
+        .map((m) => [m.titulo, dias.filter((d) => marcas[`${m.id}|${chave(d)}`] === true).length])
+        .filter(([, n]) => n);
+      const concluidos = trilha.filter((m) => m.status === 'concluido' && m.concluidoEm >= inicio);
+      if (!total && !metasOk.length && !concluidos.length) {
+        return '<h2>Sua semana</h2><p class="vazio">Foi uma semana mais leve. Tudo bem: a próxima começa agora.</p>';
+      }
+      return `
+        <h2>Sua semana<small>O que você fez nos últimos 7 dias.</small></h2>
+        <div class="card" style="margin-top:0"><div class="numeros">${numeros.map(([n, t]) => `<div class="numero"><strong>${n}</strong><span>${t}</span></div>`).join('')}</div></div>
+        ${concluidos.length ? `<section class="secao"><h2>Concluiu na trilha</h2>${concluidos.map((m) => `<div class="linha-simples">${esc(m.titulo)}</div>`).join('')}</section>` : ''}
+        ${metasOk.length ? `<section class="secao"><h2>Metas cumpridas</h2>${metasOk.map(([t, n]) => `<div class="linha-simples"><b>${n} ${n === 1 ? 'dia' : 'dias'}</b>${esc(t)}</div>`).join('')}</section>` : ''}
+        ${total ? `<section class="secao"><h2>Feito</h2>${Object.entries(feitas).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<div class="linha-simples">${esc(t)}${n > 1 ? ` <b>${n}×</b>` : ''}</div>`).join('')}</section>` : ''}`;
+    }
+
     function fluxoPlanejamento(f) {
       let miolo;
       if (f.passo === 0) {
+        miolo = htmlSuaSemana();
+      } else if (f.passo === 1) {
         const prazos = itens.filter((i) => i.prazo && !estados[i.id] && diferencaDias(HOJE, deChave(i.prazo)) >= 0 && diferencaDias(HOJE, deChave(i.prazo)) <= 7)
           .sort((a, b) => a.prazo.localeCompare(b.prazo));
         let dias = '';
@@ -1239,7 +1280,7 @@
           <h2>A semana que vem<small>Dê uma olhada e acrescente o que faltar.</small></h2>
           ${prazos.length ? `<div class="card discreto" style="margin-top:0"><h3>Prazos</h3>${prazos.map((i) => `<div class="linha-simples"><b>${fmtDiaCurto(deChave(i.prazo))}</b> ${esc(i.titulo)}</div>`).join('')}</div>` : ''}
           ${dias}`;
-      } else if (f.passo === 1) {
+      } else if (f.passo === 2) {
         const lista = listaUmDia().filter((i) => !estados[i.id]);
         miolo = `
           <h2>Um dia<small>Quer fazer alguma destas nesta semana? Toque e escolha o dia. O resto continua na caixinha.</small></h2>
@@ -1576,6 +1617,77 @@
     // ============ Adicionar e editar ============
     const $ = (id) => document.getElementById(id);
     const form = { quando: 'hoje', tipo: 'tarefa', dias: new Set(), detalhes: false, editando: null, diasManual: false };
+
+    // Adicionar escrevendo: entende dia, hora e repetição no próprio nome.
+    // Ex.: "unhas sábado", "dentista quinta 14h", "pilates toda terça às 7h", "pagar luz dia 10", "amanhã 9h30".
+    const NOMES_DIAS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    const FIM = '(?=\\s|$|[,.!?;])';
+    const proximoDiaSemana = (w) => somarDias(HOJE, (w - HOJE.getDay() + 7) % 7);
+    function entenderTexto(texto) {
+      // Sem acentos e em minúsculas, com o mesmo tamanho do original (para tirar os trechos do nome).
+      const s = [...texto].map((c) => (c.length > 1 ? c : c.normalize('NFD')[0].toLowerCase())).join('');
+      const r = {};
+      const tirar = [];
+      const achar = (fonte) => {
+        const m = new RegExp(fonte).exec(s);
+        if (m) tirar.push([m.index, m.index + m[0].length]);
+        return m;
+      };
+      const DIA = '(domingo|segunda|terca|quarta|quinta|sexta|sabado)';
+      let m;
+      if ((m = achar(`(?:^|\\s)tod[oa]s?\\s+(?:[oa]s\\s+)?(dia|${DIA.slice(1, -1)})s?(?:-feiras?)?${FIM}`))) {
+        if (m[1] === 'dia') r.rep = 'todo';
+        else { r.rep = 'dias'; r.semana = NOMES_DIAS.indexOf(m[1]); r.dia = proximoDiaSemana(r.semana); }
+      } else if ((m = achar(`(?:^|\\s)(depois de amanha|amanha|hoje)${FIM}`))) {
+        r.dia = somarDias(HOJE, m[1] === 'hoje' ? 0 : m[1] === 'amanha' ? 1 : 2);
+      } else if ((m = achar(`(?:^|\\s)(?:(?:n[oa]|nest[ea]|proxim[oa])\\s+)?${DIA}(?:-feira)?${FIM}`))) {
+        r.dia = proximoDiaSemana(NOMES_DIAS.indexOf(m[1]));
+      } else if ((m = achar(`(?:^|\\s)(?:(?:n?o\\s+)?dia\\s+)?(\\d{1,2})\\/(\\d{1,2})${FIM}`))) {
+        let d = new Date(HOJE.getFullYear(), Number(m[2]) - 1, Number(m[1]));
+        if (d < HOJE) d = new Date(HOJE.getFullYear() + 1, Number(m[2]) - 1, Number(m[1]));
+        if (d.getDate() === Number(m[1])) r.dia = d; else tirar.pop();
+      } else if ((m = achar(`(?:^|\\s)(?:n?o\\s+)?dia\\s+(\\d{1,2})${FIM}`))) {
+        const n = Number(m[1]);
+        let d = new Date(HOJE.getFullYear(), HOJE.getMonth(), n);
+        if (d < HOJE) d = new Date(HOJE.getFullYear(), HOJE.getMonth() + 1, n);
+        if (d.getDate() === n) r.dia = d; else tirar.pop();
+      }
+      if ((m = achar(`(?:^|\\s)(?:as\\s+)?(\\d{1,2})(?:h(\\d{2})?|:(\\d{2}))${FIM}`) || achar(`(?:^|\\s)as\\s+(\\d{1,2})${FIM}`))) {
+        const H = Number(m[1]);
+        const M = Number(m[2] || m[3] || 0);
+        // "estudar 2h" é duração, não hora: de madrugada, só com "às" ("às 2h").
+        if (H < 24 && M < 60 && (H >= 5 || /(^|\s)as\s/.test(m[0]))) r.hora = `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')}`;
+        else tirar.pop();
+      }
+      if (!r.dia && !r.hora && !r.rep) return null;
+      let titulo = texto;
+      for (const [a, b] of tirar.sort((x, y) => y[0] - x[0])) titulo = titulo.slice(0, a) + ' ' + titulo.slice(b);
+      r.titulo = titulo.replace(/\s+/g, ' ').replace(/[\s,;-]+$/, '').trim();
+      return r;
+    }
+
+    // Preenche Quando, Hora e Repetir pelo que entendeu, até a pessoa mexer nesses campos.
+    function aplicarTexto() {
+      if (form.editando || form.manual) return;
+      const r = entenderTexto($('f-titulo').value);
+      const ini = form.inicial;
+      if (r) form.usouTexto = true;
+      if (r && r.dia) form.quando = chave(r.dia) === K_HOJE ? 'hoje' : 'outro';
+      else if (r && ini.quando === 'umdia') form.quando = 'hoje';
+      else form.quando = ini.quando;
+      $('f-data').value = r && r.dia ? chave(r.dia) : ini.data;
+      $('f-hora').value = (r && r.hora) || '';
+      $('f-repeticao').value = (r && r.rep) || 'nao';
+      form.dias = new Set([r && r.semana !== undefined ? r.semana : deChave($('f-data').value).getDay()]);
+      const partes = [];
+      if (r && r.rep === 'todo') partes.push('todo dia');
+      else if (r && r.rep) partes.push(textoRepeticao({ semanal: [r.semana] }));
+      else if (r && r.dia) partes.push(`${rotuloDia(r.dia)}${diferencaDias(HOJE, r.dia) > 1 ? '' : ` (${fmtDiaCurto(r.dia)})`}`);
+      if (r && r.hora) partes.push(`às ${fmtHora(r.hora)}`);
+      $('f-entendi').hidden = !r;
+      $('f-entendi').textContent = r ? `Entendi: ${partes.join(' ')}` : '';
+      renderForm();
+    }
     const TIPOS_FORM = { tarefa: 'Não', treino: 'Treino', estudo: 'Estudo' };
 
     function renderForm() {
@@ -1602,6 +1714,9 @@
       form.editando = item ? item.id : null;
       form.detalhes = false;
       form.diasManual = false;
+      form.manual = false;
+      form.usouTexto = false;
+      $('f-entendi').hidden = true;
       form.tipo = item ? item.tipo : 'tarefa';
       $('f-cabecalho').textContent = item ? 'Editar' : 'Adicionar';
       $('f-erro').hidden = true;
@@ -1609,6 +1724,7 @@
       const data = item ? (item.regra ? item.regra.inicio : item.data) : dia;
       form.quando = item && ehUmDia(item) ? 'umdia' : data && data !== K_HOJE ? 'outro' : 'hoje';
       $('f-data').value = data || chave(somarDias(HOJE, 1));
+      form.inicial = { quando: form.quando, data: $('f-data').value };
       $('f-hora').value = item?.hora || '';
       const r = item?.regra;
       let rep = 'nao';
@@ -1636,12 +1752,13 @@
     $('btn-novo').addEventListener('click', () => {
       const dia = tela.aba === 'calendario' ? tela.diaSel : null;
       abrirForm(null, dia);
-      if (tela.aba === 'umdia') { form.quando = 'umdia'; renderForm(); }
+      if (tela.aba === 'umdia') { form.quando = 'umdia'; form.inicial.quando = 'umdia'; renderForm(); }
     });
+    $('f-titulo').addEventListener('input', aplicarTexto);
     $('f-cancelar').addEventListener('click', fecharForm);
     $('fundo-novo').addEventListener('click', (ev) => { if (ev.target === ev.currentTarget) fecharForm(); });
     $('f-mais').addEventListener('click', () => { form.detalhes = !form.detalhes; renderForm(); });
-    $('f-hora').addEventListener('input', (ev) => { mascaraHora(ev.target); renderForm(); });
+    $('f-hora').addEventListener('input', (ev) => { form.manual = true; mascaraHora(ev.target); renderForm(); });
     $('f-hora').addEventListener('blur', (ev) => { const h = normalizarHora(ev.target.value); if (h) ev.target.value = h; });
     $('form-novo').addEventListener('click', (ev) => {
       const q = ev.target.closest('[data-f-quando]');
@@ -1654,9 +1771,11 @@
         if (form.dias.has(i)) form.dias.delete(i); else form.dias.add(i);
         form.diasManual = true;
       }
+      if (q || d) form.manual = true;
       if (q || t || d) renderForm();
     });
     $('form-novo').addEventListener('change', (ev) => {
+      if (ev.target.id !== 'f-titulo') form.manual = true;
       if (ev.target.id === 'f-data' && ev.target.value && !form.diasManual) form.dias = new Set([deChave(ev.target.value).getDay()]);
       renderForm();
     });
@@ -1664,8 +1783,13 @@
     $('form-novo').addEventListener('submit', (ev) => {
       ev.preventDefault();
       const erro = (texto) => { $('f-erro').textContent = texto; $('f-erro').hidden = false; };
-      const titulo = $('f-titulo').value.trim();
+      let titulo = $('f-titulo').value.trim();
       if (!titulo) return erro('Escreva o que é.');
+      // Escrito com dia ou hora no nome ("unhas sábado"): o nome fica só "unhas".
+      if (form.usouTexto) {
+        const r = entenderTexto(titulo);
+        if (r && r.titulo) titulo = r.titulo;
+      }
 
       const antigo = form.editando ? itens.find((i) => i.id === form.editando) : null;
       // Na edição, campos que este formulário não mostra (ex.: área, hora da volta) continuam.
@@ -2059,14 +2183,30 @@
     // O service worker é o mesmo do app (recebe os avisos).
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
-    // Aberto pelo aviso do fechamento: vai direto para o fechamento do dia.
-    const pedido = new URLSearchParams(location.search).get('fechar');
-    if (pedido && /^\d{4}-\d{2}-\d{2}$/.test(pedido)) {
-      tela.fluxo = { tipo: 'fechamento', passo: 0, dia: pedido };
-      history.replaceState(null, '', location.pathname);
-    }
+    // Aberto pelo aviso do fechamento (ou pelo atalho "Fechar o dia"): vai direto para o fechamento.
+    const pedidos = new URLSearchParams(location.search);
+    const pedido = pedidos.get('fechar') === 'hoje' ? K_HOJE : pedidos.get('fechar');
+    if (pedido && /^\d{4}-\d{2}-\d{2}$/.test(pedido)) tela.fluxo = { tipo: 'fechamento', passo: 0, dia: pedido };
+    if (location.search) history.replaceState(null, '', location.pathname);
 
     render();
+    // Atalho "Adicionar" (segurando o ícone do app).
+    if (pedidos.get('novo')) abrirForm();
+    // Compartilhado de outro app (botão Compartilhar > Mova): vai para "Um dia", com o link nas notas.
+    const compartilhado = ['titulo', 'texto', 'link'].map((p) => (pedidos.get(p) || '').trim());
+    if (compartilhado.some(Boolean)) {
+      const [titulo, texto, link] = compartilhado;
+      const linhas = texto.split('\n').map((x) => x.trim()).filter((x) => x && !/^https?:\/\//.test(x));
+      const nome = (titulo || linhas[0] || link || texto).slice(0, 80);
+      const notas = [texto !== nome ? texto : '', link && !texto.includes(link) ? link : ''].filter(Boolean).join('\n');
+      abrirForm();
+      form.quando = 'umdia';
+      form.inicial.quando = 'umdia';
+      $('f-titulo').value = nome;
+      $('f-notas').value = notas;
+      form.detalhes = Boolean(notas);
+      renderForm();
+    }
     try {
       const aviso = sessionStorage.getItem('mova.avisoAoAbrir');
       if (aviso) { sessionStorage.removeItem('mova.avisoAoAbrir'); avisar(aviso); }

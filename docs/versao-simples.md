@@ -27,3 +27,10 @@ Testada em `web/previa/` e, desde 11/10/2026, no endereço principal (`web/index
 
 1. Em **Edge Functions > enviar-avisos > Code**, troque o código pelo de [`supabase/functions/enviar-avisos/index.ts`](../supabase/functions/enviar-avisos/index.ts) e clique em **Deploy updates**.
 2. Em **Edge Functions > marcar-aviso > Code**, troque o código pelo de [`supabase/functions/marcar-aviso/index.ts`](../supabase/functions/marcar-aviso/index.ts) e clique em **Deploy updates**.
+
+## Extras (25/10/2026)
+
+- **Sua semana**: primeiro passo do planejamento de domingo. Mostra só o que foi feito nos últimos 7 dias (coisas feitas, dias de exercício e de estudo, metas cumpridas, trilha).
+- **Adicionar escrevendo**: o nome entende dia, hora e repetição ("unhas sábado", "dentista quinta 14h", "pilates toda terça às 7h", "pagar luz dia 10", "festa 15/11"). Preenche os campos sozinho até a pessoa mexer neles; o nome salvo fica sem esses trechos.
+- **Atalhos no ícone** (manifesto, `shortcuts`): "Adicionar" (`?novo=1`) e "Fechar o dia" (`?fechar=hoje`).
+- **Compartilhar para o Mova** (manifesto, `share_target`, Android): abre o formulário em "Um dia", com o texto e o link nas notas.
