@@ -73,6 +73,8 @@
     .meta { color: var(--muted); font-size: 0.8125rem; margin-top: 2px; }
     .is-feito .titulo span { text-decoration: line-through; color: var(--muted); }
     .is-feito .hora-item { color: var(--muted); }
+    .is-naofeito .check { border-color: var(--line); border-style: dashed; }
+    .is-naofeito .titulo span, .is-naofeito .hora-item { color: var(--muted); }
 
     .painel { border-top: 1px solid var(--line); padding: 10px 12px 12px; display: grid; gap: 10px; }
     .painel p { margin: 0; font-size: 0.875rem; color: var(--muted); }
@@ -436,6 +438,7 @@
     dados.versaoApp = 2;
     if (!dados.inicioNovo) dados.inicioNovo = K_HOJE;
     if (!dados.resumoManha) dados.resumoManha = { ligado: true, hora: '05:15' };
+    if (!dados.avisoFechamento) dados.avisoFechamento = { ligado: true, hora: '20:00' };
     // Os avisos abrem o endereço principal (durante o teste, abriam /previa/).
     dados.enderecoApp = '';
     // O app anterior manda para "A encaixar" o que ficou para trás; aqui isso não acontece mais.
@@ -493,6 +496,8 @@
     const chaveOcorrencia = (item, d) => (item.regra ? `${item.id}|${chave(d)}` : item.id);
     const estadoDe = (item, d) => estados[chaveOcorrencia(item, d)] || null;
     const feito = (e) => Boolean(e && e.estado === 'feito');
+    // "Não fiz": só para o que não passa sozinho para o dia seguinte (com hora, dia todo, vários dias).
+    const naoFeito = (e) => Boolean(e && e.estado === 'naofeito');
 
     const ehUmDia = (item) => !item.data && !item.regra;
     // Só com dia: tem dia (ou repete), mas não tem hora, não é dia todo nem de vários dias.
@@ -552,13 +557,27 @@
         }
         if (!ocorreEm(item, d)) continue;
         const e = estadoDe(item, d);
-        if (e && !feito(e)) continue; // "não fazer" ou "reagendado" do app anterior
-        const entrada = { item, dia: d, aberta: !e, hora: item.diaTodo || (item.ate && chave(d) !== item.data) ? null : item.hora };
+        if (e && !feito(e) && !naoFeito(e)) continue; // "não fazer" ou "reagendado" do app anterior
+        const entrada = { item, dia: d, aberta: !e, naoFiz: naoFeito(e) ? e : null, hora: item.diaTodo || (item.ate && chave(d) !== item.data) ? null : item.hora };
         (entrada.hora ? comHora : semHora).push(entrada);
       }
       comHora.sort((a, b) => a.hora.localeCompare(b.hora));
       semHora.sort((a, b) => Number(Boolean(b.item.diaTodo || b.item.ate)) - Number(Boolean(a.item.diaTodo || a.item.ate)));
       return { comHora, semHora };
+    }
+
+    // Ao fechar um dia, o que tinha hora (ou era dia todo) e ficou sem marcar vira "não fiz".
+    // O que é só com dia continua passando para o dia seguinte. Hoje, só o que já passou da hora.
+    function marcarNaoFizNoDia(d) {
+      const k = chave(d);
+      const agora = new Date();
+      const { comHora, semHora } = listaDoDia(d);
+      for (const x of [...comHora, ...semHora]) {
+        if (!x.aberta || ehSoDia(x.item)) continue;
+        if (x.item.ate && k !== x.item.ate) continue; // vários dias: só no último
+        if (k === K_HOJE && x.hora && minutos(x.hora) > agora.getHours() * 60 + agora.getMinutes()) continue;
+        estados[chaveOcorrencia(x.item, d)] = { estado: 'naofeito', em: k };
+      }
     }
 
     function textoRepeticao(r) {
@@ -631,11 +650,20 @@
     }
     const cumpriu = (m, v) => v;
 
+    // Uma vez só: o que ficou sem marcar em dias que já passaram (fechados, ou de mais de 7 dias atrás) vira "não fiz".
+    if (!dados.naoFizAjustado) {
+      for (let d = deChave(dados.inicioNovo); d < HOJE; d = somarDias(d, 1)) {
+        if (estados['fechamento|' + chave(d)] || diferencaDias(d, HOJE) > 7) marcarNaoFizNoDia(d);
+      }
+      dados.naoFizAjustado = true;
+    }
+
     // ============ Estado da tela ============
     const tela = {
       aba: 'hoje',
       aberto: null,         // "id|dia" do item com o painel aberto
       marcarHora: '',       // hora digitada em "Marcar horário"
+      motivo: '',           // motivo digitado em "Não fiz"
       mes: new Date(HOJE.getFullYear(), HOJE.getMonth(), 1),
       diaSel: K_HOJE,
       mesMetas: new Date(HOJE.getFullYear(), HOJE.getMonth(), 1),
@@ -662,12 +690,13 @@
       else if (item.regra) meta.push(textoRepeticao(item.regra));
       if (item.etapas) meta.push(`etapas ${item.etapas.filter((x) => x.feita).length} de ${item.etapas.length}`);
       if (item.prazo && aberta) meta.push(`prazo ${rotuloDia(deChave(item.prazo))}`);
+      if (entrada.naoFiz) meta.push(`não fiz${entrada.naoFiz.motivo ? ' · ' + esc(entrada.naoFiz.motivo) : ''}`);
       const temHora = entrada.hora && !(item.ate && k !== item.data);
       const nomeIcone = item.tipo === 'tarefa' && item.regra ? 'repete' : item.tipo;
       return `
-        <li class="item area-${item.area || 'pessoal'} ${aberta ? '' : 'is-feito'}" data-id="${item.id}" data-dia="${k}" data-ctx="${ctx}">
+        <li class="item area-${item.area || 'pessoal'} ${aberta ? '' : entrada.naoFiz ? 'is-naofeito' : 'is-feito'}" data-id="${item.id}" data-dia="${k}" data-ctx="${ctx}">
           <div class="linha">
-            <button class="check" type="button" data-acao="check" aria-label="${aberta ? 'Marcar como feito' : 'Desmarcar'}">${icone('check')}</button>
+            <button class="check" type="button" data-acao="check" aria-label="${aberta || entrada.naoFiz ? 'Marcar como feito' : 'Desmarcar'}">${icone('check')}</button>
             ${temHora ? `<span class="hora-item">${fmtHora(entrada.hora)}</span>` : ''}
             <button class="corpo" type="button" data-acao="abrir" aria-expanded="${aberto}">
               <div class="titulo">${icone(nomeIcone)}<span>${esc(item.titulo)}</span></div>
@@ -713,6 +742,18 @@
             <input type="text" class="hora" id="marcar-hora" inputmode="numeric" maxlength="5" placeholder="hh:mm" value="${esc(tela.marcarHora)}">
             <button class="btn" type="button" data-acao="hora-salvar">OK</button>
             ${atual ? '<button class="link" type="button" data-acao="hora-tirar">Tirar horário</button>' : ''}
+          </div>`;
+      }
+
+      // Com hora (ou dia todo), de hoje ou de antes: dá para dizer "não fiz", com o motivo se quiser.
+      if (ctx === 'dia' && dia && !ehSoDia(item) && chave(dia) <= K_HOJE && (aberta || entrada.naoFiz)) {
+        html += `
+          <div class="campo-linha">
+            <input type="text" id="motivo" maxlength="80" placeholder="Por quê? (opcional)" value="${esc(tela.motivo)}" style="flex:1;min-width:0">
+            ${aberta
+              ? '<button class="btn" type="button" data-acao="nao-fiz">Não fiz</button>'
+              : `<button class="btn" type="button" data-acao="motivo-salvar">Salvar</button>
+                 <button class="link" type="button" data-acao="nao-fiz-desfazer">Desfazer "não fiz"</button>`}
           </div>`;
       }
 
@@ -842,6 +883,7 @@
     // ============ Ajustes ============
     function renderAjustes() {
       const r = dados.resumoManha;
+      const f = dados.avisoFechamento;
       return `
         <div class="nav-linha"><button class="btn" type="button" data-acao="voltar-aba">‹ Voltar</button><h2>Ajustes</h2><span style="width:72px"></span></div>
         ${htmlAvisos()}
@@ -854,7 +896,17 @@
               <input type="text" class="hora" id="resumo-hora" inputmode="numeric" maxlength="5" value="${esc(r.hora)}" ${r.ligado ? '' : 'disabled'}>
               <button class="btn" type="button" data-acao="resumo-hora" ${r.ligado ? '' : 'disabled'}>Salvar hora</button>
             </div>
-            <p class="sub" style="margin-top:8px">Às 20h chega o aviso do fechamento do dia.</p>
+          </div>
+        </section>
+        <section class="secao"><h2>Aviso do fechamento</h2>
+          <div class="card" style="margin-top:0">
+            <p class="sub">Chega no celular para lembrar de fechar o dia: o que ficou sem marcar, as metas e o dia seguinte.</p>
+            <div class="campo-linha" style="margin-top:10px">
+              <button class="btn" type="button" data-acao="fech-ligar" aria-pressed="${f.ligado}">${f.ligado ? 'Ligado' : 'Desligado'}</button>
+              <span>às</span>
+              <input type="text" class="hora" id="fech-hora" inputmode="numeric" maxlength="5" value="${esc(f.hora)}" ${f.ligado ? '' : 'disabled'}>
+              <button class="btn" type="button" data-acao="fech-hora" ${f.ligado ? '' : 'disabled'}>Salvar hora</button>
+            </div>
           </div>
         </section>
         <section class="secao"><h2>Metas e acompanhamento</h2>
@@ -895,7 +947,7 @@
           ${htmlAcompanhamento(m)}
           <div class="legenda">
             <span><i style="background:var(--verde);border-color:var(--verde)"></i>feito</span>
-            <span><i style="background:#f6dcd8;border-color:#e9c3bd"></i>meta não cumprida</span>
+            <span><i style="background:#f6dcd8;border-color:#e9c3bd"></i>não cumprida / não fiz</span>
             <span><i></i>sem marcar</span>
             <span><i style="border-style:dashed;border-color:var(--line)"></i>não estava marcado</span>
           </div>
@@ -941,21 +993,23 @@
 
     // ============ Acompanhamento do mês ============
     // Uma linha para cada meta, para o estudo e para o exercício físico, com uma bolinha por dia.
-    // ok: cumpriu (ou fez); nao: meta não cumprida; livre: sem estudo ou treino marcado no dia;
+    // ok: cumpriu (ou fez); nao: meta não cumprida (ou "não fiz"); livre: sem estudo ou treino marcado no dia;
     // fora: dia que ainda não chegou (ou de antes do app).
 
-    // Estudo ou treino num dia: feito, marcado e não feito, ou nada marcado.
+    // Estudo ou treino num dia: feito, "não fiz", marcado e sem marcar, ou nada marcado.
     function situacaoTipo(tipo, d) {
       const k = chave(d);
       let marcado = false;
+      let naoFez = false;
       for (const item of itens) {
         if (item.tipo !== tipo) continue;
         const ocorre = ocorreEm(item, d);
         const e = item.regra ? estados[`${item.id}|${k}`] : estados[item.id];
         if (feito(e) && (e.em ? e.em === k : ocorre)) return 'ok';
         if (ocorre) marcado = true;
+        if (ocorre && naoFeito(e)) naoFez = true;
       }
-      return marcado ? '' : 'livre';
+      return naoFez ? 'nao' : marcado ? '' : 'livre';
     }
 
     function htmlAcompanhamento(mes) {
@@ -1129,11 +1183,13 @@
       if (f.passo === 0) {
         const { comHora, semHora } = listaDoDia(d);
         const abertas = [...comHora, ...semHora].filter((x) => x.aberta);
-        const feitas = [...comHora, ...semHora].filter((x) => !x.aberta);
+        const feitas = [...comHora, ...semHora].filter((x) => !x.aberta && !x.naoFiz);
+        const naoFeitas = [...comHora, ...semHora].filter((x) => x.naoFiz);
         miolo = `
-          <h2>O que ficou sem marcar<small>Se fez, toque no círculo. Se não fez, deixe como está: o que é só com dia passa para amanhã, e o que tinha hora some.</small></h2>
+          <h2>O que ficou sem marcar<small>Se fez, toque no círculo. Se não fez, pode deixar: ao concluir, o que é só com dia passa para amanhã, e o que tinha hora fica como "não fiz". Para dizer o motivo, toque no nome.</small></h2>
           ${abertas.length ? `<ul class="itens">${abertas.map((x) => htmlItem(x)).join('')}</ul>` : '<p class="vazio">Tudo marcado.</p>'}
-          ${feitas.length ? `<section class="secao"><h2>Feito</h2><ul class="itens">${feitas.map((x) => htmlItem(x)).join('')}</ul></section>` : ''}`;
+          ${feitas.length ? `<section class="secao"><h2>Feito</h2><ul class="itens">${feitas.map((x) => htmlItem(x)).join('')}</ul></section>` : ''}
+          ${naoFeitas.length ? `<section class="secao"><h2>Não fiz</h2><ul class="itens">${naoFeitas.map((x) => htmlItem(x)).join('')}</ul></section>` : ''}`;
       } else if (f.passo === 1) {
         miolo = `<h2>Metas ${ehHoje ? 'de hoje' : 'do dia'}</h2>${htmlMetasDoDia(d)}`;
       } else {
@@ -1298,6 +1354,7 @@
       'fluxo-prox': () => { tela.fluxo.passo++; tela.aberto = null; },
       'fluxo-voltar': () => { tela.fluxo.passo--; tela.aberto = null; },
       'fechamento-concluir': () => {
+        marcarNaoFizNoDia(deChave(tela.fluxo.dia));
         estados['fechamento|' + tela.fluxo.dia] = { estado: 'feito' };
         tela.fluxo = null;
         avisar('Dia fechado.');
@@ -1313,6 +1370,13 @@
         if (!hora) { avisar('Hora inválida. Digite assim: 05:15.'); return; }
         dados.resumoManha.hora = hora;
         avisar(`O resumo vai chegar às ${fmtHora(hora)}.`);
+      },
+      'fech-ligar': () => { dados.avisoFechamento.ligado = !dados.avisoFechamento.ligado; },
+      'fech-hora': () => {
+        const hora = normalizarHora(document.getElementById('fech-hora').value);
+        if (!hora) { avisar('Hora inválida. Digite assim: 21:30.'); return; }
+        dados.avisoFechamento.hora = hora;
+        avisar(`O aviso do fechamento vai chegar às ${fmtHora(hora)}.`);
       },
       'meta-marcar': (b) => {
         const k = `${b.dataset.meta}|${b.dataset.dia}`;
@@ -1421,6 +1485,7 @@
         case 'abrir':
           tela.aberto = tela.aberto === idAberto ? null : idAberto;
           tela.marcarHora = horasDoDia[`${item.id}|${K_HOJE}`] || '';
+          tela.motivo = (dia && naoFeito(estadoDe(item, dia)) && estadoDe(item, dia).motivo) || '';
           break;
         case 'check': alternarFeito(item, dia); tela.aberto = null; break;
         case 'hora-salvar': {
@@ -1431,6 +1496,24 @@
           avisar(`Hoje às ${fmtHora(hora)}. O aviso chega na hora.`);
           break;
         }
+        case 'nao-fiz': {
+          const k = chaveOcorrencia(item, dia);
+          const anterior = estados[k];
+          const motivo = tela.motivo.trim();
+          estados[k] = { estado: 'naofeito', em: chave(dia), ...(motivo ? { motivo } : {}) };
+          tela.aberto = null;
+          avisar('Anotado: não fiz.', () => { if (anterior) estados[k] = anterior; else delete estados[k]; });
+          break;
+        }
+        case 'motivo-salvar': {
+          const e = estadoDe(item, dia);
+          const motivo = tela.motivo.trim();
+          if (motivo) e.motivo = motivo; else delete e.motivo;
+          tela.aberto = null;
+          avisar('Motivo salvo.');
+          break;
+        }
+        case 'nao-fiz-desfazer': delete estados[chaveOcorrencia(item, dia)]; tela.aberto = null; break;
         case 'hora-tirar': delete horasDoDia[`${item.id}|${K_HOJE}`]; tela.aberto = null; break;
         case 'levar-dia': levarParaDia(item, alvo.dataset.para); break;
         case 'editar': abrirForm(item); break;
@@ -1472,8 +1555,9 @@
     document.addEventListener('input', (ev) => {
       const t = ev.target;
       if (t.id === 'plano-treino') { planoTreino = t.value; dados.planoTreino = planoTreino; salvar(); }
-      if (t.id === 'marcar-hora' || t.id === 'resumo-hora') mascaraHora(t);
+      if (t.id === 'marcar-hora' || t.id === 'resumo-hora' || t.id === 'fech-hora') mascaraHora(t);
       if (t.id === 'marcar-hora') tela.marcarHora = t.value;
+      if (t.id === 'motivo') tela.motivo = t.value;
       if (t.id === 'meta-titulo') tela.novaMeta.titulo = t.value;
       if (tela.materialEditando && t.dataset.mat) tela.materialEditando[t.dataset.mat] = t.value;
     });
@@ -1963,7 +2047,7 @@
     // O service worker é o mesmo do app (recebe os avisos).
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
-    // Aberto pelo aviso das 20h: vai direto para o fechamento do dia.
+    // Aberto pelo aviso do fechamento: vai direto para o fechamento do dia.
     const pedido = new URLSearchParams(location.search).get('fechar');
     if (pedido && /^\d{4}-\d{2}-\d{2}$/.test(pedido)) {
       tela.fluxo = { tipo: 'fechamento', passo: 0, dia: pedido };

@@ -11,8 +11,9 @@ O app ficou com informação demais. A nova versão tem só três telas (**Hoje*
 | Um dia (sem data) | Nenhum | Fica na caixinha "Um dia" |
 
 - Uma coisa só com dia pode ganhar um horário só para hoje (`dados.horasDoDia`). Se não for feita, volta a ser só com dia.
-- Não existe mais "não fiz", "reagendar" nem "A encaixar". O que estava em A encaixar aparece em "Um dia".
-- Resumo da manhã (padrão 5h15, muda ou desliga na engrenagem). Às 20h, o aviso do fechamento: o que ficou sem marcar (só Concluir), as metas e o dia seguinte.
+- Não existe mais "reagendar" nem "A encaixar". O que estava em A encaixar aparece em "Um dia".
+- Resumo da manhã (padrão 5h15) e aviso do fechamento (padrão 20h): os dois mudam de hora ou desligam na engrenagem (`dados.resumoManha`, `dados.avisoFechamento`). O fechamento mostra o que ficou sem marcar, as metas e o dia seguinte.
+- "Não fiz" (desde 25/10/2026): vale só para o que tem hora, é dia todo ou de vários dias. Ao concluir o fechamento, o que ficou sem marcar vira "não fiz" sozinho; tocando no item dá para escrever o motivo (`estados[k] = { estado: "naofeito", em, motivo }`). O que é só com dia continua passando para o dia seguinte.
 - Domingo: planejamento em 3 passos (a semana com os prazos, a caixinha Um dia, estudo e treino).
 - Saíram: Lista, Histórico, energia e motivos, modelos, metas na tela principal.
 

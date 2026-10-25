@@ -4,7 +4,7 @@
 //
 // App novo (dados.versaoApp === 2, outubro de 2026):
 //   - resumo da manhã (dados.resumoManha) com o que tem hoje, os prazos e o fechamento de ontem;
-//   - às 20h, o aviso do fechamento do dia, que abre o fechamento;
+//   - o aviso do fechamento do dia (dados.avisoFechamento, padrão 20h), que abre o fechamento;
 //   - coisa só com dia que ganhou um horário para hoje (dados.horasDoDia) avisa na hora.
 // App anterior: às 20h, o resumo do dia seguinte.
 //
@@ -55,6 +55,7 @@ type Dados = {
   inicioNovo?: string;
   horasDoDia?: Record<string, string>;
   resumoManha?: { ligado: boolean; hora: string };
+  avisoFechamento?: { ligado: boolean; hora: string };
   enderecoApp?: string;
 };
 // "item" (item|dia|minutos antes) liga os botões Feito e Adiar no aviso. "url" é o que o toque abre.
@@ -219,9 +220,12 @@ function avisosDeAgora(dados: Dados, hoje: string, agora: number): Aviso[] {
     }
   }
 
-  if (agora >= HORA_RESUMO && agora < HORA_RESUMO + TOLERANCIA) {
+  // App novo: o horário do fechamento muda (ou desliga) na engrenagem. App anterior: sempre 20h.
+  const fech = dados.avisoFechamento;
+  const horaFechamento = !novo ? HORA_RESUMO : fech?.ligado === false ? null : fech?.hora ? minutos(fech.hora) : HORA_RESUMO;
+  if (horaFechamento !== null && agora >= horaFechamento && agora < horaFechamento + TOLERANCIA) {
     if (novo) {
-      // App novo, 20h: o fechamento do dia (o toque abre o fechamento) e uma prévia de amanhã.
+      // App novo: o fechamento do dia (o toque abre o fechamento) e uma prévia de amanhã.
       if (!dados.estados?.[`fechamento|${hoje}`]) {
         const hojeAbertos = abertosDoDia(dados, hoje);
         const semMarcar = hojeAbertos.comHora.length + hojeAbertos.semHora.length;
