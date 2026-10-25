@@ -504,6 +504,16 @@
     const ehSoDia = (item) => !ehUmDia(item) && !item.hora && !item.diaTodo && !item.ate;
     const horaNoDia = (item, d) => item.hora || horasDoDia[`${item.id}|${chave(d)}`] || null;
 
+    // "Não fiz" não vale para coisa só com dia (ela passa para o dia seguinte).
+    // Se a hora foi tirada depois do fechamento, o "não fiz" sai e ela volta a aparecer.
+    function limparNaoFizSoDia() {
+      for (const k of Object.keys(estados)) {
+        if (!naoFeito(estados[k])) continue;
+        const item = itens.find((i) => i.id === k.split('|')[0]);
+        if (item && ehSoDia(item)) delete estados[k];
+      }
+    }
+
     // Até onde olhar para trás procurando o que ficou sem fazer (só desde que o app novo começou).
     function limiteAtras(item, ate) {
       let limite = deChave(dados.inicioNovo);
@@ -657,6 +667,7 @@
       }
       dados.naoFizAjustado = true;
     }
+    limparNaoFizSoDia();
 
     // ============ Estado da tela ============
     const tela = {
@@ -1713,6 +1724,7 @@
 
       if (antigo) itens[itens.indexOf(antigo)] = item;
       else itens.push(item);
+      limparNaoFizSoDia();
       fecharForm();
       tela.aberto = null;
       avisar(antigo ? 'Alterações salvas.' : form.quando === 'umdia' ? 'Guardado em "Um dia".' : 'Salvo.');
